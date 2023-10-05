@@ -39,59 +39,58 @@ def save_settings_file(page):
     json.dump(prefs, write_file, indent=4)
 
 current_tab = 0
-def tab_on_change (e):
-    t = e.control
-    global current_tab, status
-    #print (f"tab changed from {current_tab} to: {t.selected_index}")
-    #print(str(t.tabs[t.selected_index].text))
-    if current_tab == 0:
-      if not status['initialized']:
-        initState(e.page)
-        status['initialized'] = True
-      if status['changed_settings']:
-        save_settings_file(e.page)
-        status['changed_settings'] = False
-        #print(len(e.page.Settings.content.controls))
-        #save_settings(e.page.Settings.content.controls)
-    if current_tab == 1:
-      if status['changed_installers']:
-        save_settings_file(e.page)
-        status['changed_installers'] = False
-        #print("Saving Installers")
-      e.page.show_install_fab(False)
-    if current_tab == 2:
-      if status['changed_parameters']:
-        update_args()
-        e.page.update_prompts()
-        save_settings_file(e.page)
-        status['changed_parameters'] = False
-      e.page.show_apply_fab(False)
-    if current_tab == 3:
-      if status['changed_prompts']:
-        e.page.save_prompts()
-        save_settings_file(e.page)
-        status['changed_prompts'] = False
-      e.page.show_run_diffusion_fab(False)
-    if current_tab == 5:
-      if status['changed_prompt_generator']:
-        save_settings_file(e.page)
-        status['changed_prompt_generator'] = False
-    
-    current_tab = t.selected_index
-    if current_tab == 1:
-      refresh_installers(e.page.Installers.content.controls)
-      e.page.show_install_fab(True)
-      #page.Installers.init_boxes()
-    if current_tab == 2:
-      update_parameters(e.page)
-      #for p in e.page.Parameters.content.controls:
-      #  p.update()
-      e.page.Parameters.content.update()
-      e.page.Parameters.update()
-      e.page.show_apply_fab(len(prompts) > 0 and status['changed_parameters'])
-    if current_tab == 3:
-      e.page.show_run_diffusion_fab(len(prompts) > 0)
-    e.page.update()
+def tab_on_change(e):
+  t = e.control
+  global current_tab, status
+  #print (f"tab changed from {current_tab} to: {t.selected_index}")
+  #print(str(t.tabs[t.selected_index].text))
+  if current_tab == 0:
+    if not status['initialized']:
+      initState(e.page)
+      status['initialized'] = True
+    if status['changed_settings']:
+      save_settings_file(e.page)
+      status['changed_settings'] = False
+      #print(len(e.page.Settings.content.controls))
+      #save_settings(e.page.Settings.content.controls)
+  if current_tab == 1:
+    if status['changed_installers']:
+      save_settings_file(e.page)
+      status['changed_installers'] = False
+      #print("Saving Installers")
+    e.page.show_install_fab(False)
+  if current_tab == 2:
+    if status['changed_parameters']:
+      update_args()
+      e.page.update_prompts()
+      save_settings_file(e.page)
+      status['changed_parameters'] = False
+    e.page.show_apply_fab(False)
+  if current_tab == 3:
+    if status['changed_prompts']:
+      e.page.save_prompts()
+      save_settings_file(e.page)
+      status['changed_prompts'] = False
+    e.page.show_run_diffusion_fab(False)
+  if current_tab == 5:
+    if status['changed_prompt_generator']:
+      save_settings_file(e.page)
+      status['changed_prompt_generator'] = False
+
+  current_tab = t.selected_index
+  if current_tab == 1:
+    refresh_installers(e.page.Installers.content.controls)
+    e.page.show_install_fab(True)
+  elif current_tab == 2:
+    update_parameters(e.page)
+    #for p in e.page.Parameters.content.controls:
+    #  p.update()
+    e.page.Parameters.content.update()
+    e.page.Parameters.update()
+    e.page.show_apply_fab(len(prompts) > 0 and status['changed_parameters'])
+  elif current_tab == 3:
+    e.page.show_run_diffusion_fab(len(prompts) > 0)
+  e.page.update()
 
 def buildTabs(page):
     page.Settings = buildSettings(page)
@@ -126,13 +125,11 @@ def b_style():
 def dict_diff(dict1, dict2):
     return {k: v for k, v in dict1.items() if k in dict2 and v != dict2[k]}
 def arg_diffs(dict1, dict2):
-    diff = dict_diff(dict1, dict2)
-    if len(diff) > 0:
-      dif = []
-      for k, v in diff.items():
-        dif.append(f'{k}: {v}')
-      return ', '.join(dif)
-    else: return None
+  diff = dict_diff(dict1, dict2)
+  if len(diff) <= 0:
+    return None
+  dif = [f'{k}: {v}' for k, v in diff.items()]
+  return ', '.join(dif)
 def get_color(color):
     if color == "green": return colors.GREEN
     elif color == "blue": return colors.BLUE
@@ -264,10 +261,26 @@ def buildSettings(page):
 def run_process(cmd_str, cwd=None, realtime=True, page=None, close_at_end=False):
   cmd_list = cmd_str if type(cmd_str) is list else cmd_str.split()
   if realtime:
-    if cwd is None:
-      process = subprocess.Popen(cmd_str, shell = True, env=env, bufsize = 1, stdout=subprocess.PIPE, stderr = subprocess.STDOUT, encoding='utf-8', errors = 'replace' ) 
-    else:
-      process = subprocess.Popen(cmd_str, shell = True, cwd=cwd, env=env, bufsize = 1, stdout=subprocess.PIPE, stderr = subprocess.STDOUT, encoding='utf-8', errors = 'replace' ) 
+    process = (subprocess.Popen(
+        cmd_str,
+        shell=True,
+        env=env,
+        bufsize=1,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        encoding='utf-8',
+        errors='replace',
+    ) if cwd is None else subprocess.Popen(
+        cmd_str,
+        shell=True,
+        cwd=cwd,
+        env=env,
+        bufsize=1,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        encoding='utf-8',
+        errors='replace',
+    ))
     while True:
       realtime_output = process.stdout.readline()
       if realtime_output == '' and process.poll() is not None:
@@ -280,12 +293,11 @@ def run_process(cmd_str, cwd=None, realtime=True, page=None, close_at_end=False)
     if close_at_end:
       page.banner.open = False
       page.update()
+  elif cwd is None:
+    #return subprocess.run(cmd_list, stdout=subprocess.PIPE).stdout.decode('utf-8')
+    return subprocess.run(cmd_list, stdout=subprocess.PIPE, env=env).stdout.decode('utf-8')
   else:
-    if cwd is None:
-      #return subprocess.run(cmd_list, stdout=subprocess.PIPE).stdout.decode('utf-8')
-      return subprocess.run(cmd_list, stdout=subprocess.PIPE, env=env).stdout.decode('utf-8')
-    else:
-      return subprocess.run(cmd_list, stdout=subprocess.PIPE, env=env, cwd=cwd).stdout.decode('utf-8')
+    return subprocess.run(cmd_list, stdout=subprocess.PIPE, env=env, cwd=cwd).stdout.decode('utf-8')
 
 def close_alert_dlg(e):
       e.page.alert_dlg.open = False
@@ -325,11 +337,11 @@ def buildInstallers(page):
         prefs[pref] = e.control.value
       page.update()
       status['changed_installers'] = True
-    #has_changed = True
-    #page.update()
+
   def changed_status(e, stat=None):
       if stat is not None:
         status[stat] = e.control.value
+
   #has_changed = False
   #save_to_GDrive = Checkbox(label="Save to Google Drive", value=prefs['save_to_GDrive'])
 
@@ -338,6 +350,7 @@ def buildInstallers(page):
     diffusers_settings.height=None if prefs['install_diffusers'] else 0
     diffusers_settings.update()
     status['changed_installers'] = True
+
   install_diffusers = Switch(label="Install HuggingFace Diffusers Pipeline", value=prefs['install_diffusers'], disabled=status['installed_diffusers'], on_change=toggle_diffusers)
 
   scheduler_mode = Dropdown(label="Scheduler/Sampler Mode", hint_text="They're very similar, with minor differences in the noise", width=200,
@@ -358,12 +371,13 @@ def buildInstallers(page):
   install_text2img = Switch(label="Install Stable Diffusion text2image, image2image & Inpaint Pipeline (/w Long Prompt Weighting)", value=prefs['install_text2img'], disabled=status['installed_txt2img'], on_change=lambda e:changed(e, 'install_text2img'))
   install_img2img = Switch(label="Install Stable Diffusion Specialized Inpainting Model for image2image & Inpaint Pipeline", value=prefs['install_img2img'], disabled=status['installed_img2img'], on_change=lambda e:changed(e, 'install_img2img'))
   install_interpolation = Switch(label="Install Stable Diffusion Animate Walk Interpolation Pipeline", value=prefs['install_interpolation'], disabled=status['installed_interpolation'], on_change=lambda e:changed(e, 'install_interpolation'))
-  
+
   def toggle_clip(e):
       prefs['install_CLIP_guided'] = install_CLIP_guided.value
       status['changed_installers'] = True
       clip_settings.height=None if prefs['install_CLIP_guided'] else 0
       clip_settings.update()
+
   install_CLIP_guided = Switch(label="Install Stable Diffusion CLIP-Guided Pipeline", value=prefs['install_CLIP_guided'], disabled=status['installed_clip'], on_change=toggle_clip)
   clip_model_id = Dropdown(label="CLIP Model ID", hint_text="Hard to explain, but they take up more VRAM, so may need to make images smaller", width=350,
             options=[
@@ -382,6 +396,7 @@ def buildInstallers(page):
       changed(e, 'install_conceptualizer')
       conceptualizer_settings.height = None if e.control.value else 0
       conceptualizer_settings.update()
+
   def change_concepts_model(e):
       nonlocal concept
       changed(e, 'concepts_model')
@@ -389,21 +404,24 @@ def buildInstallers(page):
       concept = get_concept(e.control.value)
       concepts_info.value = f"To use the concept, include keyword token **<{concept['token']}>** in your Prompts. Info at [https://huggingface.co/sd-concepts-library/{concept['name']}](https://huggingface.co/sd-concepts-library/{concept['name']})"
       concepts_info.update()
+
   def open_url(e):
       page.launch_url(e.data)
+
   def copy_token(e):
       nonlocal concept
       page.set_clipboard(f"<{concept['token']}>")
       page.snack_bar = SnackBar(content=Text(f"📋  Token <{concept['token']}> copied to clipboard... Paste as word in your Prompt Text."))
       page.snack_bar.open = True
       page.update()
+
   install_conceptualizer = Switch(label="Install Stable Diffusion Textual Inversion Conceptualizer Pipeline", value=prefs['install_conceptualizer'], on_change=toggle_conceptualizer)
   concept = get_concept(prefs['concepts_model'])
   concepts_model = Dropdown(label="SD-Concepts Library Model", hint_text="Specially trained community models made with Textual-Inversion", width=451, options=[], value=prefs['concepts_model'], on_change=change_concepts_model)
   copy_token_btn = IconButton(icon=icons.CONTENT_COPY, tooltip="Copy Token to Clipboard", on_click=copy_token)
   concepts_row = Row([concepts_model, copy_token_btn])
   concepts_info = Markdown(f"To use the concept, include keyword token **<{concept['token']}>** in your Prompts. Info at [https://huggingface.co/sd-concepts-library/{concept['name']}](https://huggingface.co/sd-concepts-library/{concept['name']})", selectable=True, on_tap_link=open_url)
-  
+
   conceptualizer_settings = Container(animate_size=animation.Animation(1000, "bounceOut"), clip_behavior="hardEdge", padding=padding.only(left=32, top=5), content=Column([concepts_row, concepts_info]))
   conceptualizer_settings.height = None if prefs['install_conceptualizer'] else 0
   for c in concepts: concepts_model.options.append(dropdown.Option(c['name']))
@@ -420,159 +438,174 @@ def buildInstallers(page):
     page.update()
     #stability_box.content = stability_settings if prefs['install_stability'] else Container(content=None)
     #stability_box.update()
+
   install_Stability_api = Switch(label="Install Stability-API DreamStudio Pipeline", value=prefs['install_Stability_api'], disabled=status['installed_stability'], on_change=toggle_stability)
   use_Stability_api = Checkbox(label="Use Stability-api by default", value=prefs['use_Stability_api'], on_change=lambda e:changed(e, 'use_Stability_api'))
   model_checkpoint = Dropdown(label="Model Checkpoint", hint_text="", width=350, options=[dropdown.Option("stable-diffusion-v1-5"), dropdown.Option("stable-diffusion-v1.4")], value=prefs['model_checkpoint'], autofocus=False, on_change=lambda e:changed(e, 'model_checkpoint'))
   generation_sampler = Dropdown(label="generation_sampler", hint_text="", width=350, options=[dropdown.Option("ddim"), dropdown.Option("plms"), dropdown.Option("k_euler"), dropdown.Option("k_euler_ancestral"), dropdown.Option("k_heun"), dropdown.Option("k_dpm_2"), dropdown.Option("k_dpm_2_ancestral"), dropdown.Option("k_lms")], value=prefs['generation_sampler'], autofocus=False, on_change=lambda e:changed(e, 'generation_sampler'))
 
   stability_settings = Container(animate_size=animation.Animation(1000, "bounceOut"), clip_behavior="hardEdge", padding=padding.only(left=32), content=Column([use_Stability_api, model_checkpoint, generation_sampler]))
-  
+
   install_ESRGAN = Switch(label="Install Real-ESRGAN AI Upscaler", value=prefs['install_ESRGAN'], disabled=status['installed_ESRGAN'], on_change=lambda e:changed(e, 'install_ESRGAN'))
   install_OpenAI = Switch(label="Install OpenAI GPT-3 Text Engine", value=prefs['install_OpenAI'], disabled=status['installed_OpenAI'], on_change=lambda e:changed(e, 'install_OpenAI'))
   install_TextSynth = Switch(label="Install TextSynth GPT-J Text Engine", value=prefs['install_TextSynth'], disabled=status['installed_TextSynth'], on_change=lambda e:changed(e, 'install_TextSynth'))
   diffusers_settings.height = None if prefs['install_diffusers'] else 0
   stability_settings.height = None if prefs['install_Stability_api'] else 0
   clip_settings.height = None if prefs['install_CLIP_guided'] else 0
-  
-  
-  def run_installers(e):
-      def console_clear():
-        page.banner.content.controls = []
-        page.update()
-      def console_msg(msg, clear=True, show_progress=True):
-        if clear:
-          page.banner.content.controls = []
-        if show_progress:
-          page.banner.content.controls.append(Stack([Container(content=Text(msg.strip() + "  ", weight="bold", color=colors.ON_SECONDARY_CONTAINER, size=18), alignment=alignment.bottom_left, padding=padding.only(top=6)), Container(content=ProgressRing(), alignment=alignment.center)]))
-          #page.banner.content.controls.append(Row([Text(msg.strip() + "  ", weight="bold", color=colors.GREEN_600), ProgressRing()]))
-        else:
-          page.banner.content.controls.append(Text(msg.strip(), weight="bold", color=colors.GREEN_600))
-        page.update()
-      # Temporary until I get Xformers to work
-      prefs['memory_optimization'] = 'Attention Slicing' if prefs['enable_attention_slicing'] else 'None'
-      if prefs['install_diffusers'] and not bool(prefs['HuggingFace_api_key']):
-        alert_msg(e.page, "You must provide your HuggingFace API Key to use Diffusers.")
-        return
-      if prefs['install_Stability_api'] and not bool(prefs['Stability_api_key']):
-        alert_msg(e.page, "You must have your DreamStudio.ai Stability-API Key to use Stability.  Note that it will use your tokens.")
-        return
-      if prefs['install_OpenAI'] and not bool(prefs['OpenAI_api_key']):
-        alert_msg(e.page, "You must have your OpenAI API Key to use GPT-3 Text AI.")
-        return
-      if prefs['install_TextSynth'] and not bool(prefs['TextSynth_api_key']):
-        alert_msg(e.page, "You must have your TextSynth API Key to use GPT-J Text AI.")
-        return
-      page.banner.content = Column([], scroll="auto", auto_scroll=True, tight=True, spacing=0, alignment="end")
-      page.banner.open = True
-      page.update()
-      if prefs['install_diffusers']:
-        console_msg("Installing Hugging Face Diffusers Pipeline...")
-        get_diffusers(page)
-        status['installed_diffusers'] = True
 
-      if prefs['install_text2img'] and prefs['install_diffusers']:
-        console_msg("Downloading Stable Diffusion Text2Image, Image2Image & Inpaint Pipeline...")
-        #with io.StringIO() as buf, redirect_stdout(buf):
-        #print('redirected')
-        get_text2image(page)
-        #output = buf.getvalue()
-        #page.banner.content.controls.append(Text(output.strip()))
-        status['installed_txt2img'] = True
-        page.img_block.height = None
-        page.img_block.update()
-        page.update()
-      if prefs['install_img2img'] and prefs['install_diffusers']:
-        console_msg("Downloading Stable Diffusion Inpaint Model & Image2Image Pipeline...")
-        get_image2image(page)
-        status['installed_img2img'] = True
-        page.img_block.height = None
-        page.img_block.update()
-        page.use_inpaint_model.visible = True
-        page.use_inpaint_model.update()
-        if not status['installed_txt2img']:
-          prefs['use_inpaint_model'] = True
-      '''if prefs['install_megapipe'] and prefs['install_diffusers']:
+
+  def run_installers(e):
+    def console_clear():
+      page.banner.content.controls = []
+      page.update()
+
+    def console_msg(msg, clear=True, show_progress=True):
+      if clear:
+        page.banner.content.controls = []
+      if show_progress:
+        page.banner.content.controls.append(
+            Stack([
+                Container(
+                    content=Text(
+                        f"{msg.strip()}  ",
+                        weight="bold",
+                        color=colors.ON_SECONDARY_CONTAINER,
+                        size=18,
+                    ),
+                    alignment=alignment.bottom_left,
+                    padding=padding.only(top=6),
+                ),
+                Container(content=ProgressRing(), alignment=alignment.center),
+            ]))
+                #page.banner.content.controls.append(Row([Text(msg.strip() + "  ", weight="bold", color=colors.GREEN_600), ProgressRing()]))
+      else:
+        page.banner.content.controls.append(Text(msg.strip(), weight="bold", color=colors.GREEN_600))
+      page.update()
+
+    # Temporary until I get Xformers to work
+    prefs['memory_optimization'] = 'Attention Slicing' if prefs['enable_attention_slicing'] else 'None'
+    if prefs['install_diffusers'] and not bool(prefs['HuggingFace_api_key']):
+      alert_msg(e.page, "You must provide your HuggingFace API Key to use Diffusers.")
+      return
+    if prefs['install_Stability_api'] and not bool(prefs['Stability_api_key']):
+      alert_msg(e.page, "You must have your DreamStudio.ai Stability-API Key to use Stability.  Note that it will use your tokens.")
+      return
+    if prefs['install_OpenAI'] and not bool(prefs['OpenAI_api_key']):
+      alert_msg(e.page, "You must have your OpenAI API Key to use GPT-3 Text AI.")
+      return
+    if prefs['install_TextSynth'] and not bool(prefs['TextSynth_api_key']):
+      alert_msg(e.page, "You must have your TextSynth API Key to use GPT-J Text AI.")
+      return
+    page.banner.content = Column([], scroll="auto", auto_scroll=True, tight=True, spacing=0, alignment="end")
+    page.banner.open = True
+    page.update()
+    if prefs['install_diffusers']:
+      console_msg("Installing Hugging Face Diffusers Pipeline...")
+      get_diffusers(page)
+      status['installed_diffusers'] = True
+
+    if prefs['install_text2img'] and prefs['install_diffusers']:
+      console_msg("Downloading Stable Diffusion Text2Image, Image2Image & Inpaint Pipeline...")
+      #with io.StringIO() as buf, redirect_stdout(buf):
+      #print('redirected')
+      get_text2image(page)
+      #output = buf.getvalue()
+      #page.banner.content.controls.append(Text(output.strip()))
+      status['installed_txt2img'] = True
+      page.img_block.height = None
+      page.img_block.update()
+      page.update()
+    if prefs['install_img2img'] and prefs['install_diffusers']:
+      console_msg("Downloading Stable Diffusion Inpaint Model & Image2Image Pipeline...")
+      get_image2image(page)
+      status['installed_img2img'] = True
+      page.img_block.height = None
+      page.img_block.update()
+      page.use_inpaint_model.visible = True
+      page.use_inpaint_model.update()
+      if not status['installed_txt2img']:
+        prefs['use_inpaint_model'] = True
+    '''if prefs['install_megapipe'] and prefs['install_diffusers']:
         console_msg("Downloading Stable Diffusion Unified Mega Pipeline...")
         get_text2image(page)
         status['installed_megapipe'] = True
         page.img_block.height = None
         page.img_block.update()'''
-      if prefs['install_interpolation'] and prefs['install_diffusers']:
-        console_msg("Downloading Stable Diffusion Walk Interpolation Pipeline...")
-        get_interpolation(page)
-        status['installed_interpolation'] = True
-        page.interpolation_block.visible = True
-        page.interpolation_block.update()
-      if prefs['install_CLIP_guided'] and prefs['install_diffusers']:
-        console_msg("Downloading Stable Diffusion CLIP-Guided Pipeline...")
-        get_clip(page)
-        status['installed_clip'] = True
-        page.use_clip_guided_model.visible = True
-        page.use_clip_guided_model.update()
-        page.clip_block.height = None if prefs['use_clip_guided_model'] else 0
-        page.clip_block.update()
-        if prefs['use_clip_guided_model']:
-          page.img_block.height = 0
-          page.img_block.update()
-      if prefs['install_conceptualizer']:
-        console_msg("Installing SD Concepts Library Textual Inversion Pipeline...")
-        get_conceptualizer(page)
-        page.use_conceptualizer_model.visible = True
-        page.use_conceptualizer_model.update()
-        if prefs['use_conceptualizer']:
-          page.img_block.height = 0
-          page.img_block.update()
-        status['installed_conceptualizer'] = True
-      if prefs['install_Stability_api']:
-        console_msg("Installing Stability-API DreamStudio.ai Pipeline...")
-        get_stability(page)
-        status['installed_stability'] = True
-      if prefs['install_ESRGAN'] and not status['installed_ESRGAN']:
-        console_msg("Installing Real-ESRGAN Upscaler...")
-        if not os.path.isdir(os.path.join(root_dir, 'Real-ESRGAN')):
-          get_ESRGAN(page)
-        status['installed_ESRGAN'] = True
-        page.ESRGAN_block.height = None
-        page.ESRGAN_block.update()
-      if prefs['install_OpenAI'] and not status['installed_OpenAI']:
-        console_msg("Installing OpenAI GPT-3 Libraries...")
-        try:
-          import openai
-        except ImportError as e:
-          run_process("pip install openai -qq", page=page)
-          pass
-        status['installed_OpenAI'] = True
-      if prefs['install_TextSynth'] and not status['installed_TextSynth']:
-        console_msg("Installing TextSynth GPT-J Libraries...")
-        try:
-          from textsynthpy import TextSynth, Complete
-        except ImportError as e:
-          run_process("pip install textsynthpy -qq", page=page)
-          pass
-        status['installed_TextSynth'] = True
-      #print('Done Installing...')
-      if prefs['enable_sounds']: page.snd_done.play()
-      console_clear()
-      page.banner.open = False
-      page.banner.update()
-      page.update()
-      install_diffusers.update()
-      #install_text2img.update()
-      #install_img2img.update()
-      install_Stability_api.update()
-      install_CLIP_guided.update()
-      install_ESRGAN.update()
-      install_OpenAI.update()
-      install_TextSynth.update()
-      update_parameters(page)
-      page.Parameters.content.update()
-      #page.Parameters.updater()
-      page.Installers.content.update()
-      page.Installers.update()
-      page.show_install_fab(False)
-      page.tabs.selected_index = 2
-      page.tabs.update()
-      page.update()
+    if prefs['install_interpolation'] and prefs['install_diffusers']:
+      console_msg("Downloading Stable Diffusion Walk Interpolation Pipeline...")
+      get_interpolation(page)
+      status['installed_interpolation'] = True
+      page.interpolation_block.visible = True
+      page.interpolation_block.update()
+    if prefs['install_CLIP_guided'] and prefs['install_diffusers']:
+      console_msg("Downloading Stable Diffusion CLIP-Guided Pipeline...")
+      get_clip(page)
+      status['installed_clip'] = True
+      page.use_clip_guided_model.visible = True
+      page.use_clip_guided_model.update()
+      page.clip_block.height = None if prefs['use_clip_guided_model'] else 0
+      page.clip_block.update()
+      if prefs['use_clip_guided_model']:
+        page.img_block.height = 0
+        page.img_block.update()
+    if prefs['install_conceptualizer']:
+      console_msg("Installing SD Concepts Library Textual Inversion Pipeline...")
+      get_conceptualizer(page)
+      page.use_conceptualizer_model.visible = True
+      page.use_conceptualizer_model.update()
+      if prefs['use_conceptualizer']:
+        page.img_block.height = 0
+        page.img_block.update()
+      status['installed_conceptualizer'] = True
+    if prefs['install_Stability_api']:
+      console_msg("Installing Stability-API DreamStudio.ai Pipeline...")
+      get_stability(page)
+      status['installed_stability'] = True
+    if prefs['install_ESRGAN'] and not status['installed_ESRGAN']:
+      console_msg("Installing Real-ESRGAN Upscaler...")
+      if not os.path.isdir(os.path.join(root_dir, 'Real-ESRGAN')):
+        get_ESRGAN(page)
+      status['installed_ESRGAN'] = True
+      page.ESRGAN_block.height = None
+      page.ESRGAN_block.update()
+    if prefs['install_OpenAI'] and not status['installed_OpenAI']:
+      console_msg("Installing OpenAI GPT-3 Libraries...")
+      try:
+        import openai
+      except ImportError as e:
+        run_process("pip install openai -qq", page=page)
+      status['installed_OpenAI'] = True
+    if prefs['install_TextSynth'] and not status['installed_TextSynth']:
+      console_msg("Installing TextSynth GPT-J Libraries...")
+      try:
+        from textsynthpy import TextSynth, Complete
+      except ImportError as e:
+        run_process("pip install textsynthpy -qq", page=page)
+      status['installed_TextSynth'] = True
+    #print('Done Installing...')
+    if prefs['enable_sounds']: page.snd_done.play()
+    console_clear()
+    page.banner.open = False
+    page.banner.update()
+    page.update()
+    install_diffusers.update()
+    #install_text2img.update()
+    #install_img2img.update()
+    install_Stability_api.update()
+    install_CLIP_guided.update()
+    install_ESRGAN.update()
+    install_OpenAI.update()
+    install_TextSynth.update()
+    update_parameters(page)
+    page.Parameters.content.update()
+    #page.Parameters.updater()
+    page.Installers.content.update()
+    page.Installers.update()
+    page.show_install_fab(False)
+    page.tabs.selected_index = 2
+    page.tabs.update()
+    page.update()
+
   def show_install_fab(show = True):
     if show:
       page.floating_action_button = FloatingActionButton(icon=icons.FILE_DOWNLOAD, text="Run Installations", on_click=run_installers)
@@ -581,9 +614,10 @@ def buildInstallers(page):
       if page.floating_action_button is not None:
         page.floating_action_button = None
         page.update()
+
   page.show_install_fab = show_install_fab
   install_button = ElevatedButton(content=Text(value="⏬   Run Installations ", size=20), on_click=run_installers)
-  
+
   #image_output = TextField(label="Image Output Path", value=prefs['image_output'], on_change=changed)
   c = Container(padding=padding.only(18, 12, 0, 0),content=Column([
         Text ("📥  Stable Diffusion Required & Optional Installers", style="titleLarge"),
@@ -610,6 +644,7 @@ def buildInstallers(page):
     stability_settings.update()
     clip_settings.update()
     page.update()
+
   #init_boxes()
   return c
 

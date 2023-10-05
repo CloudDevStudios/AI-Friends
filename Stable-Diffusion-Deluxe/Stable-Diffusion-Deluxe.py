@@ -28,16 +28,31 @@ except:
     dist_dir = root_dir
   #print(f'Root: {root_dir} Dist:{dist_dir}')
   is_Colab = False
-  pass
 stable_dir = root_dir
 env = os.environ.copy()
 def run_sp(cmd_str, cwd=None, realtime=True):
   cmd_list = cmd_str if type(cmd_str) is list else cmd_str.split()
   if realtime:
-    if cwd is None:
-      process = subprocess.Popen(cmd_str, shell = True, env=env, bufsize = 1, stdout=subprocess.PIPE, stderr = subprocess.STDOUT, encoding='utf-8', errors = 'replace' ) 
-    else:
-      process = subprocess.Popen(cmd_str, shell = True, cwd=cwd, env=env, bufsize = 1, stdout=subprocess.PIPE, stderr = subprocess.STDOUT, encoding='utf-8', errors = 'replace' ) 
+    process = (subprocess.Popen(
+        cmd_str,
+        shell=True,
+        env=env,
+        bufsize=1,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        encoding='utf-8',
+        errors='replace',
+    ) if cwd is None else subprocess.Popen(
+        cmd_str,
+        shell=True,
+        cwd=cwd,
+        env=env,
+        bufsize=1,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        encoding='utf-8',
+        errors='replace',
+    ))
     while True:
       realtime_output = process.stdout.readline()
       if realtime_output == '' and process.poll() is not None:
@@ -45,11 +60,10 @@ def run_sp(cmd_str, cwd=None, realtime=True):
       if realtime_output:
         print(realtime_output.strip(), flush=False)
         sys.stdout.flush()
+  elif cwd is None:
+    return subprocess.run(cmd_list, stdout=subprocess.PIPE, env=env).stdout.decode('utf-8')
   else:
-    if cwd is None:
-      return subprocess.run(cmd_list, stdout=subprocess.PIPE, env=env).stdout.decode('utf-8')
-    else:
-      return subprocess.run(cmd_list, stdout=subprocess.PIPE, env=env, cwd=cwd).stdout.decode('utf-8')
+    return subprocess.run(cmd_list, stdout=subprocess.PIPE, env=env, cwd=cwd).stdout.decode('utf-8')
 save_to_GDrive = storage_type == "Colab Google Drive"
 if save_to_GDrive:
   if not os.path.isdir(os.path.join(root_dir, 'drive')):
@@ -97,9 +111,6 @@ try:
   import flet
 except ImportError as e:
   run_sp("pip install flet --upgrade --quiet --pre")
-  #run_sp("pip install -i https://test.pypi.org/simple/ flet")
-  #run_sp("pip install --upgrade git+https://github.com/flet-dev/flet.git@controls-s3#egg=flet-dev")
-  pass
 try:
   import requests
 except Exception:
@@ -110,13 +121,11 @@ try:
 except Exception:
   run_sp("pip install -q ipython")
   from IPython.display import clear_output
-  pass
 try:
   from emoji import emojize
 except ImportError as e:
   run_sp("pip install emoji --quiet")
   from emoji import emojize
-  pass
 if 'url' not in locals():
   url=""
 if tunnel_type == "ngrok":
@@ -126,7 +135,6 @@ if tunnel_type == "ngrok":
     run_sp("pip install pyngrok --quiet", realtime=False)
     run_sp(f"ngrok authtoken {ng()}", realtime=False)
     import pyngrok
-    pass
 elif tunnel_type == "localtunnel":
   if not bool(url):
     import re
@@ -386,12 +394,11 @@ from flet import icons, dropdown, colors, padding, margin, alignment, border_rad
 from flet import TextAlign, FontWeight, ClipBehavior, MainAxisAlignment, CrossAxisAlignment, ScrollMode, ImageFit, ThemeMode
 from flet import Image as Img
 try:
-    import PIL
+  import PIL
 except Exception:
-    run_sp("pip install Pillow", realtime=False)
-    run_sp("pip install image", realtime=False)
-    import PIL
-    pass
+  run_sp("pip install Pillow", realtime=False)
+  run_sp("pip install image", realtime=False)
+  import PIL
 from PIL import Image as PILImage # Avoids flet conflict
 import random as rnd
 import io, shutil, traceback
@@ -401,8 +408,6 @@ try:
 except ModuleNotFoundError:
   run_sp("pip install numpy", realtime=False)
   import numpy as np
-  pass
-
 if 'prefs' not in locals():
     raise ValueError("Setup not initialized. Run the previous code block first and authenticate your Drive storage.")
 status = {
@@ -456,58 +461,57 @@ def save_settings_file(page, change_icon=True):
     json.dump(prefs, write_file, indent=4)
 
 current_tab = 0
-def tab_on_change (e):
-    t = e.control
-    global current_tab, status
-    #print (f"tab changed from {current_tab} to: {t.selected_index}")
-    #print(str(t.tabs[t.selected_index].text))
-    if current_tab == 0:
-      #if not status['initialized']:
-      #  initState(e.page)
-      #  status['initialized'] = True
-      if status['changed_settings']:
-        save_settings_file(e.page)
-        status['changed_settings'] = False
-        #print(len(e.page.Settings.content.controls))
-        #save_settings(e.page.Settings.content.controls)
-    if current_tab == 1:
-      if status['changed_installers']:
-        save_settings_file(e.page)
-        status['changed_installers'] = False
-        #print("Saving Installers")
-      e.page.show_install_fab(False)
-    if current_tab == 2:
-      if status['changed_parameters']:
-        update_args()
-        e.page.update_prompts()
-        save_settings_file(e.page)
-        status['changed_parameters'] = False
-      e.page.show_apply_fab(False)
-    if current_tab == 3:
-      if status['changed_prompts']:
-        e.page.save_prompts()
-        save_settings_file(e.page)
-        status['changed_prompts'] = False
-      e.page.show_run_diffusion_fab(False, p=e.page)
-    if current_tab == 5:
-      if status['changed_prompt_generator']:
-        save_settings_file(e.page)
-        status['changed_prompt_generator'] = False
-    
-    current_tab = t.selected_index
-    if current_tab == 1:
-      refresh_installers(e.page.Installers.controls[0].content.controls)
-      e.page.show_install_fab(True)
-      #page.Installers.init_boxes()
-    if current_tab == 2:
-      update_parameters(e.page)
-      #for p in e.page.Parameters.content.controls:
-      e.page.Parameters.controls[0].content.update()
-      e.page.Parameters.update()
-      e.page.show_apply_fab(len(prompts) > 0 and status['changed_parameters'])
-    if current_tab == 3:
-      e.page.show_run_diffusion_fab(len(prompts) > 0, p=e.page)
-    e.page.update()
+def tab_on_change(e):
+  t = e.control
+  global current_tab, status
+  #print (f"tab changed from {current_tab} to: {t.selected_index}")
+  #print(str(t.tabs[t.selected_index].text))
+  if current_tab == 0:
+    #if not status['initialized']:
+    #  initState(e.page)
+    #  status['initialized'] = True
+    if status['changed_settings']:
+      save_settings_file(e.page)
+      status['changed_settings'] = False
+      #print(len(e.page.Settings.content.controls))
+      #save_settings(e.page.Settings.content.controls)
+  if current_tab == 1:
+    if status['changed_installers']:
+      save_settings_file(e.page)
+      status['changed_installers'] = False
+      #print("Saving Installers")
+    e.page.show_install_fab(False)
+  if current_tab == 2:
+    if status['changed_parameters']:
+      update_args()
+      e.page.update_prompts()
+      save_settings_file(e.page)
+      status['changed_parameters'] = False
+    e.page.show_apply_fab(False)
+  if current_tab == 3:
+    if status['changed_prompts']:
+      e.page.save_prompts()
+      save_settings_file(e.page)
+      status['changed_prompts'] = False
+    e.page.show_run_diffusion_fab(False, p=e.page)
+  if current_tab == 5:
+    if status['changed_prompt_generator']:
+      save_settings_file(e.page)
+      status['changed_prompt_generator'] = False
+
+  current_tab = t.selected_index
+  if current_tab == 1:
+    refresh_installers(e.page.Installers.controls[0].content.controls)
+    e.page.show_install_fab(True)
+  elif current_tab == 2:
+    update_parameters(e.page)
+    #for p in e.page.Parameters.content.controls:
+    e.page.Parameters.controls[0].content.update()
+    e.page.Parameters.update()
+    e.page.show_apply_fab(len(prompts) > 0 and status['changed_parameters'])
+  elif current_tab == 3:
+    e.page.show_run_diffusion_fab(len(prompts) > 0, p=e.page)
+  e.page.update()
 
 def buildTabs(page):
     page.Settings = buildSettings(page)
@@ -576,156 +580,263 @@ def buildPromptHelpers(page):
     return promptTabs
 
 def buildStableDiffusers(page):
-    page.RePainter = buildRepainter(page)
-    page.unCLIP = buildUnCLIP(page)
-    page.unCLIP_Interpolation = buildUnCLIP_Interpolation(page)
-    page.unCLIP_ImageInterpolation = buildUnCLIP_ImageInterpolation(page)
-    page.UnCLIP_ImageVariation = buildUnCLIP_ImageVariation(page)
-    page.EDICT = buildEDICT(page)
-    page.DiffEdit = buildDiffEdit(page)
-    page.ImageVariation = buildImageVariation(page)
-    page.CLIPstyler = buildCLIPstyler(page)
-    page.MagicMix = buildMagicMix(page)
-    page.SemanticGuidance = buildSemanticGuidance(page)
-    page.PaintByExample = buildPaintByExample(page)
-    page.InstructPix2Pix = buildInstructPix2Pix(page)
-    page.ControlNet = buildControlNet(page)
-    page.DeepFloyd = buildDeepFloyd(page)
-    page.TextToVideo = buildTextToVideo(page)
-    page.TextToVideoZero = buildTextToVideoZero(page)
-    page.MaterialDiffusion = buildMaterialDiffusion(page)
-    page.MaskMaker = buildDreamMask(page)
-    page.DiT = buildDiT(page)
-    page.DreamFusion = buildDreamFusion(page)
-    page.Point_E = buildPoint_E(page)
-    page.Shap_E = buildShap_E(page)
-    page.InstantNGP = buildInstantNGP(page)
-    diffusersTabs = Tabs(
-        selected_index=0,
-        animation_duration=300,
-        tabs=[
-            Tab(text="Instruct Pix2Pix", content=page.InstructPix2Pix, icon=icons.SOLAR_POWER),
-            Tab(text="ControlNet", content=page.ControlNet, icon=icons.HUB),
-            Tab(text="DeepFloyd", content=page.DeepFloyd, icon=icons.LOOKS),
-            Tab(text="unCLIP", content=page.unCLIP, icon=icons.ATTACHMENT_SHARP),
-            Tab(text="unCLIP Interpolation", content=page.unCLIP_Interpolation, icon=icons.TRANSFORM),
-            Tab(text="unCLIP Image Interpolation", content=page.unCLIP_ImageInterpolation, icon=icons.ANIMATION),
-            Tab(text="unCLIP Image Variation", content=page.UnCLIP_ImageVariation, icon=icons.AIRLINE_STOPS),
-            Tab(text="Image Variation", content=page.ImageVariation, icon=icons.FORMAT_COLOR_FILL),
-            Tab(text="EDICT Edit", content=page.EDICT, icon=icons.AUTO_AWESOME),
-            Tab(text="DiffEdit", content=page.DiffEdit, icon=icons.AUTO_GRAPH),
-            Tab(text="RePainter", content=page.RePainter, icon=icons.FORMAT_PAINT),
-            Tab(text="MagicMix", content=page.MagicMix, icon=icons.BLENDER),
-            Tab(text="Paint-by-Example", content=page.PaintByExample, icon=icons.FORMAT_SHAPES),
-            Tab(text="CLIP-Styler", content=page.CLIPstyler, icon=icons.STYLE),
-            Tab(text="Semantic Guidance", content=page.SemanticGuidance, icon=icons.ROUTE),
-            Tab(text="Text-to-Video", content=page.TextToVideo, icon=icons.MISSED_VIDEO_CALL),
-            Tab(text="Text-to-Video Zero", content=page.TextToVideoZero, icon=icons.ONDEMAND_VIDEO),
-            Tab(text="Material Diffusion", content=page.MaterialDiffusion, icon=icons.TEXTURE),
-            Tab(text="DiT", content=page.DiT, icon=icons.ANALYTICS),
-            #Tab(text="DreamFusion 3D", content=page.DreamFusion, icon=icons.THREED_ROTATION),
-            #Tab(text="Point-E 3D", content=page.Point_E, icon=icons.SWIPE_UP),
-            #Tab(text="Shap-E 3D", content=page.Shap_E, icon=icons.PRECISION_MANUFACTURING),
-            #Tab(text="Instant-NGP", content=page.InstantNGP, icon=icons.STADIUM),
-            #Tab(text="Dream Mask Maker", content=page.MaskMaker, icon=icons.GRADIENT),
-        ],
-        expand=1,
-        #on_change=tab_on_change
-    )
-    return diffusersTabs
+  page.RePainter = buildRepainter(page)
+  page.unCLIP = buildUnCLIP(page)
+  page.unCLIP_Interpolation = buildUnCLIP_Interpolation(page)
+  page.unCLIP_ImageInterpolation = buildUnCLIP_ImageInterpolation(page)
+  page.UnCLIP_ImageVariation = buildUnCLIP_ImageVariation(page)
+  page.EDICT = buildEDICT(page)
+  page.DiffEdit = buildDiffEdit(page)
+  page.ImageVariation = buildImageVariation(page)
+  page.CLIPstyler = buildCLIPstyler(page)
+  page.MagicMix = buildMagicMix(page)
+  page.SemanticGuidance = buildSemanticGuidance(page)
+  page.PaintByExample = buildPaintByExample(page)
+  page.InstructPix2Pix = buildInstructPix2Pix(page)
+  page.ControlNet = buildControlNet(page)
+  page.DeepFloyd = buildDeepFloyd(page)
+  page.TextToVideo = buildTextToVideo(page)
+  page.TextToVideoZero = buildTextToVideoZero(page)
+  page.MaterialDiffusion = buildMaterialDiffusion(page)
+  page.MaskMaker = buildDreamMask(page)
+  page.DiT = buildDiT(page)
+  page.DreamFusion = buildDreamFusion(page)
+  page.Point_E = buildPoint_E(page)
+  page.Shap_E = buildShap_E(page)
+  page.InstantNGP = buildInstantNGP(page)
+  return Tabs(
+      selected_index=0,
+      animation_duration=300,
+      tabs=[
+          Tab(
+              text="Instruct Pix2Pix",
+              content=page.InstructPix2Pix,
+              icon=icons.SOLAR_POWER,
+          ),
+          Tab(text="ControlNet", content=page.ControlNet, icon=icons.HUB),
+          Tab(text="DeepFloyd", content=page.DeepFloyd, icon=icons.LOOKS),
+          Tab(text="unCLIP", content=page.unCLIP, icon=icons.ATTACHMENT_SHARP),
+          Tab(
+              text="unCLIP Interpolation",
+              content=page.unCLIP_Interpolation,
+              icon=icons.TRANSFORM,
+          ),
+          Tab(
+              text="unCLIP Image Interpolation",
+              content=page.unCLIP_ImageInterpolation,
+              icon=icons.ANIMATION,
+          ),
+          Tab(
+              text="unCLIP Image Variation",
+              content=page.UnCLIP_ImageVariation,
+              icon=icons.AIRLINE_STOPS,
+          ),
+          Tab(
+              text="Image Variation",
+              content=page.ImageVariation,
+              icon=icons.FORMAT_COLOR_FILL,
+          ),
+          Tab(text="EDICT Edit", content=page.EDICT, icon=icons.AUTO_AWESOME),
+          Tab(text="DiffEdit", content=page.DiffEdit, icon=icons.AUTO_GRAPH),
+          Tab(text="RePainter",
+              content=page.RePainter,
+              icon=icons.FORMAT_PAINT),
+          Tab(text="MagicMix", content=page.MagicMix, icon=icons.BLENDER),
+          Tab(
+              text="Paint-by-Example",
+              content=page.PaintByExample,
+              icon=icons.FORMAT_SHAPES,
+          ),
+          Tab(text="CLIP-Styler", content=page.CLIPstyler, icon=icons.STYLE),
+          Tab(
+              text="Semantic Guidance",
+              content=page.SemanticGuidance,
+              icon=icons.ROUTE,
+          ),
+          Tab(
+              text="Text-to-Video",
+              content=page.TextToVideo,
+              icon=icons.MISSED_VIDEO_CALL,
+          ),
+          Tab(
+              text="Text-to-Video Zero",
+              content=page.TextToVideoZero,
+              icon=icons.ONDEMAND_VIDEO,
+          ),
+          Tab(
+              text="Material Diffusion",
+              content=page.MaterialDiffusion,
+              icon=icons.TEXTURE,
+          ),
+          Tab(text="DiT", content=page.DiT, icon=icons.ANALYTICS),
+          # Tab(text="DreamFusion 3D", content=page.DreamFusion, icon=icons.THREED_ROTATION),
+          # Tab(text="Point-E 3D", content=page.Point_E, icon=icons.SWIPE_UP),
+          # Tab(text="Shap-E 3D", content=page.Shap_E, icon=icons.PRECISION_MANUFACTURING),
+          # Tab(text="Instant-NGP", content=page.InstantNGP, icon=icons.STADIUM),
+          # Tab(text="Dream Mask Maker", content=page.MaskMaker, icon=icons.GRADIENT),
+      ],
+      expand=1,
+      # on_change=tab_on_change
+  )
 
 def build3DAIs(page):
-    page.DreamFusion = buildDreamFusion(page)
-    page.Point_E = buildPoint_E(page)
-    page.Shap_E = buildShap_E(page)
-    page.InstantNGP = buildInstantNGP(page)
-    diffusersTabs = Tabs(
-        selected_index=0,
-        animation_duration=300,
-        tabs=[
-            Tab(text="DreamFusion 3D", content=page.DreamFusion, icon=icons.THREED_ROTATION),
-            Tab(text="Point-E 3D", content=page.Point_E, icon=icons.SWIPE_UP),
-            Tab(text="Shap-E 3D", content=page.Shap_E, icon=icons.PRECISION_MANUFACTURING),
-            Tab(text="Instant-NGP", content=page.InstantNGP, icon=icons.STADIUM),
-        ],
-        expand=1,
-    )
-    return diffusersTabs
+  page.DreamFusion = buildDreamFusion(page)
+  page.Point_E = buildPoint_E(page)
+  page.Shap_E = buildShap_E(page)
+  page.InstantNGP = buildInstantNGP(page)
+  return Tabs(
+      selected_index=0,
+      animation_duration=300,
+      tabs=[
+          Tab(
+              text="DreamFusion 3D",
+              content=page.DreamFusion,
+              icon=icons.THREED_ROTATION,
+          ),
+          Tab(text="Point-E 3D", content=page.Point_E, icon=icons.SWIPE_UP),
+          Tab(
+              text="Shap-E 3D",
+              content=page.Shap_E,
+              icon=icons.PRECISION_MANUFACTURING,
+          ),
+          Tab(text="Instant-NGP", content=page.InstantNGP, icon=icons.STADIUM),
+      ],
+      expand=1,
+  )
 
 def buildTrainers(page):
-    page.DreamBooth = buildDreamBooth(page)
-    page.TexualInversion = buildTextualInversion(page)
-    page.LoRA_Dreambooth = buildLoRA_Dreambooth(page)
-    page.LoRA = buildLoRA(page)
-    page.Converter = buildConverter(page)
-    page.CheckpointMerger = buildCheckpointMerger(page)
-    trainersTabs = Tabs(
-        selected_index=0,
-        animation_duration=300,
-        tabs=[
-            Tab(text="LoRA", content=page.LoRA, icon=icons.SETTINGS_SYSTEM_DAYDREAM),
-            Tab(text="LoRA DreamBooth", content=page.LoRA_Dreambooth, icon=icons.SETTINGS_BRIGHTNESS),
-            Tab(text="DreamBooth", content=page.DreamBooth, icon=icons.PHOTO),
-            Tab(text="Texual-Inversion", content=page.TexualInversion, icon=icons.PHOTO_ALBUM),
-            Tab(text="Model Converter", content=page.Converter, icon=icons.PUBLISHED_WITH_CHANGES),
-            Tab(text="Checkpoint Merger", content=page.CheckpointMerger, icon=icons.JOIN_FULL),
-        ],
-        expand=1,
-        #on_change=tab_on_change
-    )
-    return trainersTabs
+  page.DreamBooth = buildDreamBooth(page)
+  page.TexualInversion = buildTextualInversion(page)
+  page.LoRA_Dreambooth = buildLoRA_Dreambooth(page)
+  page.LoRA = buildLoRA(page)
+  page.Converter = buildConverter(page)
+  page.CheckpointMerger = buildCheckpointMerger(page)
+  return Tabs(
+      selected_index=0,
+      animation_duration=300,
+      tabs=[
+          Tab(
+              text="LoRA",
+              content=page.LoRA,
+              icon=icons.SETTINGS_SYSTEM_DAYDREAM,
+          ),
+          Tab(
+              text="LoRA DreamBooth",
+              content=page.LoRA_Dreambooth,
+              icon=icons.SETTINGS_BRIGHTNESS,
+          ),
+          Tab(text="DreamBooth", content=page.DreamBooth, icon=icons.PHOTO),
+          Tab(
+              text="Texual-Inversion",
+              content=page.TexualInversion,
+              icon=icons.PHOTO_ALBUM,
+          ),
+          Tab(
+              text="Model Converter",
+              content=page.Converter,
+              icon=icons.PUBLISHED_WITH_CHANGES,
+          ),
+          Tab(
+              text="Checkpoint Merger",
+              content=page.CheckpointMerger,
+              icon=icons.JOIN_FULL,
+          ),
+      ],
+      expand=1,
+      # on_change=tab_on_change
+  )
 
 def buildAudioAIs(page):
-    page.TortoiseTTS = buildTortoiseTTS(page)
-    page.DanceDiffusion = buildDanceDiffusion(page)
-    page.AudioDiffusion = buildAudioDiffusion(page)
-    page.AudioLDM = buildAudioLDM(page)
-    page.Bark = buildBark(page)
-    page.Riffusion = buildRiffusion(page)
-    page.Mubert = buildMubert(page)
-    audioAIsTabs = Tabs(
-        selected_index=0,
-        animation_duration=300,
-        tabs=[
-            Tab(text="Tortoise-TTS", content=page.TortoiseTTS, icon=icons.RECORD_VOICE_OVER),
-            Tab(text="AudioLDM", content=page.AudioLDM, icon=icons.NOISE_AWARE),
-            Tab(text="Bark", content=page.Bark, icon=icons.PETS),
-            Tab(text="Riffusion", content=page.Riffusion, icon=icons.SPATIAL_AUDIO),
-            Tab(text="Audio Diffusion", content=page.AudioDiffusion, icon=icons.GRAPHIC_EQ),
-            Tab(text="HarmonAI Dance Diffusion", content=page.DanceDiffusion, icon=icons.QUEUE_MUSIC),
-            Tab(text="Mubert Music", content=page.Mubert, icon=icons.MUSIC_VIDEO),
-        ],
-        expand=1,
-        #on_change=tab_on_change
-    )
-    return audioAIsTabs
+  page.TortoiseTTS = buildTortoiseTTS(page)
+  page.DanceDiffusion = buildDanceDiffusion(page)
+  page.AudioDiffusion = buildAudioDiffusion(page)
+  page.AudioLDM = buildAudioLDM(page)
+  page.Bark = buildBark(page)
+  page.Riffusion = buildRiffusion(page)
+  page.Mubert = buildMubert(page)
+  return Tabs(
+      selected_index=0,
+      animation_duration=300,
+      tabs=[
+          Tab(
+              text="Tortoise-TTS",
+              content=page.TortoiseTTS,
+              icon=icons.RECORD_VOICE_OVER,
+          ),
+          Tab(text="AudioLDM", content=page.AudioLDM, icon=icons.NOISE_AWARE),
+          Tab(text="Bark", content=page.Bark, icon=icons.PETS),
+          Tab(
+              text="Riffusion",
+              content=page.Riffusion,
+              icon=icons.SPATIAL_AUDIO,
+          ),
+          Tab(
+              text="Audio Diffusion",
+              content=page.AudioDiffusion,
+              icon=icons.GRAPHIC_EQ,
+          ),
+          Tab(
+              text="HarmonAI Dance Diffusion",
+              content=page.DanceDiffusion,
+              icon=icons.QUEUE_MUSIC,
+          ),
+          Tab(text="Mubert Music", content=page.Mubert,
+              icon=icons.MUSIC_VIDEO),
+      ],
+      expand=1,
+      # on_change=tab_on_change
+  )
 
 def buildExtras(page):
-    page.ESRGAN_upscaler = buildESRGANupscaler(page)
-    page.CachedModelManager = buildCachedModelManager(page)
-    page.CustomModelManager = buildCustomModelManager(page)
-    page.BLIP2Image2Text = buildBLIP2Image2Text(page)
-    page.DallE2 = buildDallE2(page)
-    page.Kandinsky = buildKandinsky(page)
-    page.KandinskyFuse = buildKandinskyFuse(page)
-    page.DeepDaze = buildDeepDaze(page)
-    extrasTabs = Tabs(
-        selected_index=0,
-        animation_duration=300,
-        tabs=[
-            Tab(text="Real-ESRGAN Batch Upscaler", content=page.ESRGAN_upscaler, icon=icons.PHOTO_SIZE_SELECT_LARGE),
-            Tab(text="Cache Manager", content=page.CachedModelManager, icon=icons.CACHED),
-            Tab(text="Model Manager", content=page.CustomModelManager, icon=icons.DIFFERENCE),
-            Tab(text="BLIP2 Image2Text", content=page.BLIP2Image2Text, icon=icons.BATHTUB),
-            Tab(text="OpenAI Dall-E 2", content=page.DallE2, icon=icons.BLUR_CIRCULAR),
-            Tab(text="Kandinsky 2.1", content=page.Kandinsky, icon=icons.AC_UNIT),
-            Tab(text="Kandinsky Fuse", content=page.KandinskyFuse, icon=icons.FIREPLACE),
-            Tab(text="DeepDaze", content=page.DeepDaze, icon=icons.FACE),
-        ],
-        expand=1,
-        #on_change=tab_on_change
-    )
-    return extrasTabs
+  page.ESRGAN_upscaler = buildESRGANupscaler(page)
+  page.CachedModelManager = buildCachedModelManager(page)
+  page.CustomModelManager = buildCustomModelManager(page)
+  page.BLIP2Image2Text = buildBLIP2Image2Text(page)
+  page.DallE2 = buildDallE2(page)
+  page.Kandinsky = buildKandinsky(page)
+  page.KandinskyFuse = buildKandinskyFuse(page)
+  page.DeepDaze = buildDeepDaze(page)
+  return Tabs(
+      selected_index=0,
+      animation_duration=300,
+      tabs=[
+          Tab(
+              text="Real-ESRGAN Batch Upscaler",
+              content=page.ESRGAN_upscaler,
+              icon=icons.PHOTO_SIZE_SELECT_LARGE,
+          ),
+          Tab(
+              text="Cache Manager",
+              content=page.CachedModelManager,
+              icon=icons.CACHED,
+          ),
+          Tab(
+              text="Model Manager",
+              content=page.CustomModelManager,
+              icon=icons.DIFFERENCE,
+          ),
+          Tab(
+              text="BLIP2 Image2Text",
+              content=page.BLIP2Image2Text,
+              icon=icons.BATHTUB,
+          ),
+          Tab(
+              text="OpenAI Dall-E 2",
+              content=page.DallE2,
+              icon=icons.BLUR_CIRCULAR,
+          ),
+          Tab(text="Kandinsky 2.1", content=page.Kandinsky,
+              icon=icons.AC_UNIT),
+          Tab(
+              text="Kandinsky Fuse",
+              content=page.KandinskyFuse,
+              icon=icons.FIREPLACE,
+          ),
+          Tab(text="DeepDaze", content=page.DeepDaze, icon=icons.FACE),
+      ],
+      expand=1,
+      # on_change=tab_on_change
+  )
 
 
 def b_style():
@@ -733,13 +844,11 @@ def b_style():
 def dict_diff(dict1, dict2):
     return {k: v for k, v in dict1.items() if k in dict2 and v != dict2[k]}
 def arg_diffs(dict1, dict2):
-    diff = dict_diff(dict1, dict2)
-    if len(diff) > 0:
-      dif = []
-      for k, v in diff.items():
-        dif.append(f'{to_title(k)}: {v}')
-      return ', '.join(dif)
-    else: return None
+  diff = dict_diff(dict1, dict2)
+  if len(diff) <= 0:
+    return None
+  dif = [f'{to_title(k)}: {v}' for k, v in diff.items()]
+  return ', '.join(dif)
 def get_color(color):
     if color == "green": return colors.GREEN
     elif color == "blue": return colors.BLUE
@@ -1011,22 +1120,21 @@ def close_alert_dlg(e):
       e.page.alert_dlg.open = False
       e.page.update()
 def alert_msg(page, msg, content=None, okay="", sound=True, width=None, wide=False):
-      try:
-        if page.alert_dlg.open == True: return
-      except Exception: pass
-      try:
-        if prefs['enable_sounds'] and sound: page.snd_error.play()
-      except Exception:
-        msg += " May have to restart runtime."
-        pass
-      okay = ElevatedButton(content=Text("👌  OKAY " if okay == "" else okay, size=18), on_click=close_alert_dlg)
-      if content == None: content = Container(content=None)
-      page.alert_dlg = AlertDialog(title=Text(msg), content=Column([content], scroll=ScrollMode.AUTO), actions=[okay], actions_alignment=MainAxisAlignment.END)#, width=None if not wide else (page.window_width or page.width) - 200)
-      page.dialog = page.alert_dlg
-      page.alert_dlg.open = True
-      try:
-        page.update()
-      except Exception: pass
+  try:
+    if page.alert_dlg.open == True: return
+  except Exception: pass
+  try:
+    if prefs['enable_sounds'] and sound: page.snd_error.play()
+  except Exception:
+    msg += " May have to restart runtime."
+  okay = ElevatedButton(content=Text("👌  OKAY " if okay == "" else okay, size=18), on_click=close_alert_dlg)
+  if content is None: content = Container(content=None)
+  page.alert_dlg = AlertDialog(title=Text(msg), content=Column([content], scroll=ScrollMode.AUTO), actions=[okay], actions_alignment=MainAxisAlignment.END)#, width=None if not wide else (page.window_width or page.width) - 200)
+  page.dialog = page.alert_dlg
+  page.alert_dlg.open = True
+  try:
+    page.update()
+  except Exception: pass
 
 def save_installers(controls):
   for c in controls:
@@ -1055,11 +1163,11 @@ def buildInstallers(page):
         prefs[pref] = e.control.value
       page.update()
       status['changed_installers'] = True
-    #has_changed = True
-    #page.update()
+
   def changed_status(e, stat=None):
       if stat is not None:
         status[stat] = e.control.value
+
   #has_changed = False
   #save_to_GDrive = Checkbox(label="Save to Google Drive", value=prefs['save_to_GDrive'])
 
@@ -1068,6 +1176,7 @@ def buildInstallers(page):
       diffusers_settings.height=None if prefs['install_diffusers'] else 0
       diffusers_settings.update()
       status['changed_installers'] = True
+
   install_diffusers = Tooltip(message="Required Libraries for most Image Generation functionality", content=Switch(label="Install HuggingFace Diffusers Pipeline", value=prefs['install_diffusers'], disabled=status['installed_diffusers'], active_color=colors.PRIMARY_CONTAINER, active_track_color=colors.PRIMARY, on_change=toggle_diffusers))
   def change_scheduler(e):
       show = e.control.value == "DDIM"
@@ -1080,6 +1189,7 @@ def buildInstallers(page):
             else:
               eta.visible = show
               eta.update()
+
   scheduler_mode = Dropdown(label="Scheduler/Sampler Mode", hint_text="They're very similar, with minor differences in the noise", width=200,
             options=[
                 dropdown.Option("DDIM"),
@@ -1112,25 +1222,30 @@ def buildInstallers(page):
       elif e.control.value == "Custom Model Path":
         custom_area.content = Row([custom_model, model_card])
       custom_area.update()
+
   def changed_finetuned_model(e):
       changed(e, 'finetuned_model')
       model = get_finetuned_model(e.control.value)
       model_card.value = f"  [**Model Card**](https://huggingface.co/{model['path']})"
       model_card.update()
+
   def changed_dreambooth_library(e):
       changed(e, 'dreambooth_model')
       model = get_dreambooth_model(e.control.value)
       model_card.value = f"  [**Model Card**](https://huggingface.co/{model['path']})"
       model_card.update()
+
   def changed_custom_model(e):
       changed(e, 'custom_model')
       model = {'name': 'Custom Model', 'path': e.control.value, 'prefix': ''}
       model_card.value = f"  [**Model Card**](https://huggingface.co/{model['path']})"
       model_card.update()
+
   def toggle_safe(e):
       changed(e, 'install_safe')
       safety_config.visible = e.control.value
       safety_config.update()
+
   model = get_model(prefs['model_ckpt'])
   model_path = model['path']
   model_ckpt = Container(Dropdown(label="Model Checkpoint", width=262, options=[
@@ -1183,12 +1298,13 @@ def buildInstallers(page):
   safety_config = Container(Dropdown(label="Model Safety Level", width=350, options=[dropdown.Option("Weak"), dropdown.Option("Medium"), dropdown.Option("Strong"), dropdown.Option("Max")], value=prefs['safety_config'], on_change=lambda e:changed(e, 'safety_config')), padding=padding.only(left=32))
   safety_config.visible = prefs['install_safe']
   install_versatile = Tooltip(message="Multi-flow model that provides both image and text data streams and conditioned on both text and image.", content=Switch(label="Install Versatile Diffusion text2image, Dual Guided & Image Variation Pipeline", value=prefs['install_versatile'], active_color=colors.PRIMARY_CONTAINER, active_track_color=colors.PRIMARY, disabled=status['installed_versatile'], on_change=lambda e:changed(e, 'install_versatile')))
-  
+
   def toggle_clip(e):
       prefs['install_CLIP_guided'] = install_CLIP_guided.content.value
       status['changed_installers'] = True
       clip_settings.height=None if prefs['install_CLIP_guided'] else 0
       clip_settings.update()
+
   install_CLIP_guided = Tooltip(message="Uses alternative LAION & OpenAI ViT diffusion. Takes more VRAM, so may need to make images smaller", content=Switch(label="Install Stable Diffusion CLIP-Guided Pipeline", value=prefs['install_CLIP_guided'], disabled=status['installed_clip'], active_color=colors.PRIMARY_CONTAINER, active_track_color=colors.PRIMARY, on_change=toggle_clip))
   clip_model_id = Dropdown(label="CLIP Model ID", width=350,
             options=[
@@ -1202,25 +1318,29 @@ def buildInstallers(page):
             ], value=prefs['clip_model_id'], autofocus=False, on_change=lambda e:changed(e, 'clip_model_id'),
         )
   clip_settings = Container(animate_size=animation.Animation(1000, AnimationCurve.BOUNCE_OUT), clip_behavior=ClipBehavior.HARD_EDGE, padding=padding.only(left=32, top=4), content=Column([clip_model_id]))
-  
+
   def toggle_conceptualizer(e):
       changed(e, 'install_conceptualizer')
       conceptualizer_settings.height = None if e.control.value else 0
       conceptualizer_settings.update()
+
   def change_concepts_model(e):
       nonlocal concept
       changed(e, 'concepts_model')
       concept = get_concept(e.control.value)
       concepts_info.value = f"To use the concept, include keyword token **<{concept['token']}>** in your Prompts. Info at [https://huggingface.co/sd-concepts-library/{concept['name']}](https://huggingface.co/sd-concepts-library/{concept['name']})"
       concepts_info.update()
+
   def open_url(e):
       page.launch_url(e.data)
+
   def copy_token(e):
       nonlocal concept
       page.set_clipboard(f"<{concept['token']}>")
       page.snack_bar = SnackBar(content=Text(f"📋  Token <{concept['token']}> copied to clipboard... Paste as word in your Prompt Text."))
       page.snack_bar.open = True
       page.update()
+
   install_conceptualizer = Tooltip(message="Loads specially trained concept models to include in prompt with token", content=Switch(label="Install Stable Diffusion Textual-Inversion Conceptualizer Pipeline", value=prefs['install_conceptualizer'], active_color=colors.PRIMARY_CONTAINER, active_track_color=colors.PRIMARY, on_change=toggle_conceptualizer))
   concept = get_concept(prefs['concepts_model'])
   concepts_model = Dropdown(label="SD-Concepts Library Model", hint_text="Specially trained community models made with Textual-Inversion", width=451, options=[], value=prefs['concepts_model'], on_change=change_concepts_model)
@@ -1253,6 +1373,7 @@ def buildInstallers(page):
       page.update()
       #stability_box.content = stability_settings if prefs['install_stability'] else Container(content=None)
       #stability_box.update()
+
   install_Stability_api = Tooltip(message="Use DreamStudio.com servers without your GPU to create images on CPU.", content=Switch(label="Install Stability-API DreamStudio Pipeline", value=prefs['install_Stability_api'], disabled=status['installed_stability'], active_color=colors.PRIMARY_CONTAINER, active_track_color=colors.PRIMARY, on_change=toggle_stability))
   use_Stability_api = Checkbox(label="Use Stability-ai API by default", tooltip="Instead of using Diffusers, generate images in their cloud. Can toggle to compare batches..", value=prefs['use_Stability_api'], fill_color=colors.PRIMARY_CONTAINER, check_color=colors.ON_PRIMARY_CONTAINER, on_change=lambda e:changed(e, 'use_Stability_api'))
   model_checkpoint = Dropdown(label="Model Checkpoint", hint_text="", width=350, options=[dropdown.Option("stable-diffusion-xl-beta-v2-2-2"), dropdown.Option("stable-diffusion-768-v2-1"), dropdown.Option("stable-diffusion-512-v2-1"), dropdown.Option("stable-diffusion-768-v2-0"), dropdown.Option("stable-diffusion-512-v2-0"), dropdown.Option("stable-diffusion-v1-5"), dropdown.Option("stable-diffusion-v1"), dropdown.Option("stable-inpainting-512-v2-0"), dropdown.Option("stable-inpainting-v1-0")], value=prefs['model_checkpoint'], autofocus=False, on_change=lambda e:changed(e, 'model_checkpoint'))
@@ -1261,12 +1382,13 @@ def buildInstallers(page):
   generation_sampler = Dropdown(label="Generation Sampler", hint_text="", width=350, options=[dropdown.Option("DDIM"), dropdown.Option("DDPM"), dropdown.Option("K_EULER"), dropdown.Option("K_EULER_ANCESTRAL"), dropdown.Option("K_HEUN"), dropdown.Option("K_DPMPP_2M"), dropdown.Option("K_DPM_2_ANCESTRAL"), dropdown.Option("K_LMS"), dropdown.Option("K_DPMPP_2S_ANCESTRAL"), dropdown.Option("K_DPM_2")], value=prefs['generation_sampler'], autofocus=False, on_change=lambda e:changed(e, 'generation_sampler'))
   #"K_EULER" "K_DPM_2" "K_LMS" "K_DPMPP_2S_ANCESTRAL" "K_DPMPP_2M" "DDIM" "DDPM" "K_EULER_ANCESTRAL" "K_HEUN" "K_DPM_2_ANCESTRAL"
   stability_settings = Container(animate_size=animation.Animation(1000, AnimationCurve.BOUNCE_OUT), clip_behavior=ClipBehavior.HARD_EDGE, padding=padding.only(left=32), content=Column([use_Stability_api, model_checkpoint, generation_sampler, clip_guidance_preset]))
-  
+
   def toggle_AIHorde(e):
       prefs['install_AIHorde_api'] = e.control.value
       AIHorde_settings.height=None if prefs['install_AIHorde_api'] else 0
       AIHorde_settings.update()
       page.update()
+
   install_AIHorde = Tooltip(message="Use AIHorde.net Crowdsourced cloud without your GPU to create images on CPU.", content=Switch(label="Install AIHorde Crowdsorced Pipeline", value=prefs['install_AIHorde_api'],active_color=colors.PRIMARY_CONTAINER, active_track_color=colors.PRIMARY, on_change=toggle_AIHorde))
   use_AIHorde = Checkbox(label="Use Stable Horde API by default", tooltip="Instead of using Diffusers, generate images in their cloud. Can toggle to compare batches..", value=prefs['use_AIHorde_api'], fill_color=colors.PRIMARY_CONTAINER, check_color=colors.ON_PRIMARY_CONTAINER, on_change=lambda e:changed(e, 'use_AIHorde_api'))
   AIHorde_model = Dropdown(label="Model Checkpoint", hint_text="", width=350, options=[dropdown.Option("3DKX"), dropdown.Option("Abyss OrangeMix"), dropdown.Option("AbyssOrangeMix-AfterDark"), dropdown.Option("ACertainThing"), dropdown.Option("AIO Pixel Art"), dropdown.Option("Analog Diffusion"), dropdown.Option("Anime Pencil Diffusion"), dropdown.Option("Anygen"), dropdown.Option("Anything Diffusion"), dropdown.Option("Anything v3"), dropdown.Option("App Icon Diffusion"), dropdown.Option("Arcane Diffusion"), dropdown.Option("Archer Diffusion"), dropdown.Option("Asim Simpsons"), dropdown.Option("A to Zovya RPG"), dropdown.Option("Balloon Art"), dropdown.Option("Borderlands"), dropdown.Option("BPModel"), dropdown.Option("BubblyDubbly"), dropdown.Option("Char"), dropdown.Option("CharHelper"), dropdown.Option("Cheese Daddys Landscape Mix"), dropdown.Option("ChilloutMix"), dropdown.Option("ChromaV5"), dropdown.Option("Classic Animation Diffusion"), dropdown.Option("Clazy"), dropdown.Option("Colorful"), dropdown.Option("Coloring Book"), dropdown.Option("Comic-Diffusion"), dropdown.Option("Concept Sheet"), dropdown.Option("Counterfeit"), dropdown.Option("Cyberpunk Anime Diffusion"), dropdown.Option("CyriousMix"), dropdown.Option("Dan Mumford Style"), dropdown.Option("Darkest Diffusion"), dropdown.Option("Dark Victorian Diffusion"), dropdown.Option("Deliberate"), dropdown.Option("DGSpitzer Art Diffusion"), dropdown.Option("Disco Elysium"), dropdown.Option("DnD Item"), dropdown.Option("Double Exposure Diffusion"), dropdown.Option("Dreamlike Diffusion"), dropdown.Option("Dreamlike Photoreal"), dropdown.Option("DreamLikeSamKuvshinov"), dropdown.Option("Dreamshaper"), dropdown.Option("DucHaiten"), dropdown.Option("DucHaiten Classic Anime"), dropdown.Option("Dungeons and Diffusion"), dropdown.Option("Dungeons n Waifus"), dropdown.Option("Eimis Anime Diffusion"), dropdown.Option("Elden Ring Diffusion"), dropdown.Option("Elldreth's Lucid Mix"), dropdown.Option("Elldreths Retro Mix"), dropdown.Option("Epic Diffusion"), dropdown.Option("Eternos"), dropdown.Option("Experience"), dropdown.Option("ExpMix Line"), dropdown.Option("FaeTastic"), dropdown.Option("Fantasy Card Diffusion"), dropdown.Option("FKing SciFi"), dropdown.Option("Funko Diffusion"), dropdown.Option("Furry Epoch"), dropdown.Option("Future Diffusion"), dropdown.Option("Ghibli Diffusion"), dropdown.Option("GorynichMix"), dropdown.Option("Grapefruit Hentai"), dropdown.Option("Graphic-Art"), dropdown.Option("GTA5 Artwork Diffusion"), dropdown.Option("GuoFeng"), dropdown.Option("Guohua Diffusion"), dropdown.Option("HASDX"), dropdown.Option("Hassanblend"), dropdown.Option("Healy's Anime Blend"), dropdown.Option("Hentai Diffusion"), dropdown.Option("HRL"), dropdown.Option("iCoMix"), dropdown.Option("Illuminati Diffusion"), dropdown.Option("Inkpunk Diffusion"), dropdown.Option("Jim Eidomode"), dropdown.Option("JWST Deep Space Diffusion"), dropdown.Option("Kenshi"), dropdown.Option("Knollingcase"), dropdown.Option("Korestyle"), dropdown.Option("kurzgesagt"), dropdown.Option("Laolei New Berry Protogen Mix"), dropdown.Option("Lawlas's yiff mix"), dropdown.Option("Liberty"), dropdown.Option("Marvel Diffusion"), dropdown.Option("Mega Merge Diffusion"), dropdown.Option("Microcasing"), dropdown.Option("Microchars"), dropdown.Option("Microcritters"), dropdown.Option("Microscopic"), dropdown.Option("Microworlds"), dropdown.Option("Midjourney Diffusion"), dropdown.Option("Midjourney PaintArt"), dropdown.Option("Min Illust Background"), dropdown.Option("ModernArt Diffusion"), dropdown.Option("mo-di-diffusion"), dropdown.Option("Moedel"), dropdown.Option("MoistMix"), dropdown.Option("Movie Diffusion"), dropdown.Option("NeverEnding Dream"), dropdown.Option("Nitro Diffusion"), dropdown.Option("Openniji"), dropdown.Option("OrbAI"), dropdown.Option("Papercutcraft"), dropdown.Option("Papercut Diffusion"), dropdown.Option("Pastel Mix"), dropdown.Option("Perfect World"), dropdown.Option("PFG"), dropdown.Option("pix2pix"), dropdown.Option("PIXHELL"), dropdown.Option("Poison"), dropdown.Option("Pokemon3D"), dropdown.Option("PortraitPlus"), dropdown.Option("PPP"), dropdown.Option("Pretty 2.5D"), dropdown.Option("PRMJ"), dropdown.Option("Project Unreal Engine 5"), dropdown.Option("ProtoGen"), dropdown.Option("Protogen Anime"), dropdown.Option("Protogen Infinity"), dropdown.Option("Pulp Vector Art"), dropdown.Option("PVC"), dropdown.Option("Rachel Walker Watercolors"), dropdown.Option("Rainbowpatch"), dropdown.Option("Ranma Diffusion"), dropdown.Option("RCNZ Dumb Monkey"), dropdown.Option("RCNZ Gorilla With A Brick"), dropdown.Option("RealBiter"), dropdown.Option("Realism Engine"), dropdown.Option("Realistic Vision"), dropdown.Option("Redshift Diffusion"), dropdown.Option("Rev Animated"), dropdown.Option("Robo-Diffusion"), dropdown.Option("Rodent Diffusion"), dropdown.Option("RPG"), dropdown.Option("Samdoesarts Ultmerge"), dropdown.Option("Sci-Fi Diffusion"), dropdown.Option("SD-Silicon"), dropdown.Option("Seek.art MEGA"), dropdown.Option("Smoke Diffusion"), dropdown.Option("Something"), dropdown.Option("Sonic Diffusion"), dropdown.Option("Spider-Verse Diffusion"), dropdown.Option("Squishmallow Diffusion"), dropdown.Option("stable_diffusion"), dropdown.Option("stable_diffusion_2.1"), dropdown.Option("stable_diffusion_inpainting"), dropdown.Option("Supermarionation"), dropdown.Option("Sygil-Dev Diffusion"), dropdown.Option("Synthwave"), dropdown.Option("SynthwavePunk"), dropdown.Option("TrexMix"), dropdown.Option("trinart"), dropdown.Option("Trinart Characters"), dropdown.Option("Tron Legacy Diffusion"), dropdown.Option("T-Shirt Diffusion"), dropdown.Option("T-Shirt Print Designs"), dropdown.Option("Uhmami"), dropdown.Option("Ultraskin"), dropdown.Option("UMI Olympus"), dropdown.Option("Unstable Ink Dream"), dropdown.Option("URPM"), dropdown.Option("Valorant Diffusion"), dropdown.Option("Van Gogh Diffusion"), dropdown.Option("Vector Art"), dropdown.Option("vectorartz"), dropdown.Option("Vintedois Diffusion"), dropdown.Option("VinteProtogenMix"), dropdown.Option("Vivid Watercolors"), dropdown.Option("Voxel Art Diffusion"), dropdown.Option("waifu_diffusion"), dropdown.Option("Wavyfusion"), dropdown.Option("Woop-Woop Photo"), dropdown.Option("Xynthii-Diffusion"), dropdown.Option("Yiffy"), dropdown.Option("Zack3D"), dropdown.Option("Zeipher Female Model"), dropdown.Option("Zelda BOTW")], value=prefs['AIHorde_model'], autofocus=False, on_change=lambda e:changed(e, 'AIHorde_model'))
@@ -1274,287 +1396,288 @@ def buildInstallers(page):
   AIHorde_post_processing = Dropdown(label="Post-Processing", hint_text="", width=350, options=[dropdown.Option("None"), dropdown.Option("GFPGAN"), dropdown.Option("RealESRGAN_x4plus"), dropdown.Option("RealESRGAN_x2plus"), dropdown.Option("RealESRGAN_x4plus_anime_6B"), dropdown.Option("NMKD_Siax"), dropdown.Option("4x_AnimeSharp"), dropdown.Option("CodeFormers"), dropdown.Option("strip_background")], value=prefs['AIHorde_post_processing'], autofocus=False, on_change=lambda e:changed(e, 'AIHorde_post_processing'))
   AIHorde_settings = Container(animate_size=animation.Animation(1000, AnimationCurve.BOUNCE_OUT), clip_behavior=ClipBehavior.HARD_EDGE, padding=padding.only(left=32), content=Column([use_AIHorde, AIHorde_model, AIHorde_sampler, AIHorde_post_processing]))
   AIHorde_settings.height = None if prefs['install_AIHorde_api'] else 0
-  
+
   install_ESRGAN = Tooltip(message="Recommended to enlarge & sharpen all images as they're made.", content=Switch(label="Install Real-ESRGAN AI Upscaler", value=prefs['install_ESRGAN'], disabled=status['installed_ESRGAN'], active_color=colors.PRIMARY_CONTAINER, active_track_color=colors.PRIMARY, on_change=lambda e:changed(e, 'install_ESRGAN')))
   install_OpenAI = Tooltip(message="Use advanced AI to help make creative prompts. Also enables DALL-E 2 generation.", content=Switch(label="Install OpenAI GPT-3 Text Engine", value=prefs['install_OpenAI'], disabled=status['installed_OpenAI'], active_color=colors.PRIMARY_CONTAINER, active_track_color=colors.PRIMARY, on_change=lambda e:changed(e, 'install_OpenAI')))
   install_TextSynth = Tooltip(message="Alternative Text AI for brainstorming & rewriting your prompts. Pretty smart..", content=Switch(label="Install TextSynth GPT-J Text Engine", value=prefs['install_TextSynth'], disabled=status['installed_TextSynth'], active_color=colors.PRIMARY_CONTAINER, active_track_color=colors.PRIMARY, on_change=lambda e:changed(e, 'install_TextSynth')))
   diffusers_settings.height = None if prefs['install_diffusers'] else 0
   stability_settings.height = None if prefs['install_Stability_api'] else 0
   clip_settings.height = None if prefs['install_CLIP_guided'] else 0
-  
-  
+
+
   def run_installers(e):
-      global force_updates
-      def console_clear():
-        page.banner.content.controls = []
-        page.update()
-      def console_msg(msg, clear=True, show_progress=True):
-        if not page.banner.open:
-          page.banner.open = True
-        if clear:
-          page.banner.content.controls = []
-        if show_progress:
-          page.banner.content.controls.append(Row([Stack([Icon(icons.DOWNLOADING, color=colors.AMBER, size=48), Container(content=ProgressRing(), padding=padding.only(top=6, left=6), alignment=alignment.center)]), Container(content=Text("  " + msg.strip() , weight=FontWeight.BOLD, color=colors.ON_SECONDARY_CONTAINER, size=18), alignment=alignment.bottom_left, padding=padding.only(top=6)) ]))
-          #page.banner.content.controls.append(Stack([Container(content=Text(msg.strip() + "  ", weight=FontWeight.BOLD, color=colors.ON_SECONDARY_CONTAINER, size=18), alignment=alignment.bottom_left, padding=padding.only(top=6)), Container(content=ProgressRing(), alignment=alignment.center if (page.window_width or page.width) > 768 else alignment.center_right)]))
-          #page.banner.content.controls.append(Stack([Container(content=Text(msg.strip() + "  ", weight=FontWeight.BOLD, color=colors.ON_SECONDARY_CONTAINER, size=18), alignment=alignment.bottom_left, padding=padding.only(top=6)), Container(content=ProgressRing(), alignment=alignment.center)]))
-          #page.banner.content.controls.append(Row([Text(msg.strip() + "  ", weight=FontWeight.BOLD, color=colors.GREEN_600), ProgressRing()]))
-        else:
-          page.banner.content.controls.append(Text(msg.strip(), weight=FontWeight.BOLD, color=colors.GREEN_600))
-        page.update()
-      page.console_msg = console_msg
-      if status['changed_installers']:
-        save_settings_file(page, change_icon=False)
-        status['changed_installers'] = False
-      # Temporary until I get Xformers to work
-      #prefs['memory_optimization'] = 'Attention Slicing' if prefs['enable_attention_slicing'] else 'None'
-      if prefs['install_diffusers'] and not bool(prefs['HuggingFace_api_key']):
-        alert_msg(e.page, "You must provide your HuggingFace API Key to use Diffusers.")
-        return
-      if prefs['install_Stability_api'] and not bool(prefs['Stability_api_key']):
-        alert_msg(e.page, "You must have your DreamStudio.ai Stability-API Key to use Stability.  Note that it will use your tokens.")
-        return
-      if prefs['install_OpenAI'] and not bool(prefs['OpenAI_api_key']):
-        alert_msg(e.page, "You must have your OpenAI API Key to use GPT-3 Text AI.")
-        return
-      if prefs['install_TextSynth'] and not bool(prefs['TextSynth_api_key']):
-        alert_msg(e.page, "You must have your TextSynth API Key to use GPT-J Text AI.")
-        return
-      if prefs['install_AIHorde_api'] and not bool(prefs['AIHorde_api_key']):
-        alert_msg(e.page, "You must have your AIHorde.net API Key to use Stable Horde.  Note that it will use your Kudos.")
-        return
-      page.banner.content = Column([], scroll=ScrollMode.AUTO, auto_scroll=True, tight=True, spacing=0, alignment=MainAxisAlignment.END)
-      page.banner.open = True
+    global force_updates
+    def console_clear():
+      page.banner.content.controls = []
       page.update()
-      if prefs['install_diffusers']:
-        console_msg("Installing Hugging Face Diffusers Pipeline...")
-        get_diffusers(page)
-        status['installed_diffusers'] = True
-      if prefs['install_text2img'] and prefs['install_diffusers']:
-        console_msg("Downloading Stable Diffusion Text2Image, Image2Image & Inpaint Pipeline...")
-        #with io.StringIO() as buf, redirect_stdout(buf):
-        #print('redirected')
-        get_text2image(page)
-        #output = buf.getvalue()
-        #page.banner.content.controls.append(Text(output.strip()))
-        status['installed_txt2img'] = True
-        page.img_block.height = None
-        page.img_block.update()
-        page.update()
-      if prefs['install_img2img'] and prefs['install_diffusers']:
-        console_msg("Downloading Stable Diffusion Inpaint Model & Image2Image Pipeline...")
-        get_image2image(page)
-        status['installed_img2img'] = True
-        page.img_block.height = None
-        page.img_block.update()
-        page.use_inpaint_model.visible = True
-        page.use_inpaint_model.update()
-        if not status['installed_txt2img']:
-          prefs['use_inpaint_model'] = True
-      '''if prefs['install_megapipe'] and prefs['install_diffusers']:
+
+    def console_msg(msg, clear=True, show_progress=True):
+      if not page.banner.open:
+        page.banner.open = True
+      if clear:
+        page.banner.content.controls = []
+      if show_progress:
+        page.banner.content.controls.append(Row([Stack([Icon(icons.DOWNLOADING, color=colors.AMBER, size=48), Container(content=ProgressRing(), padding=padding.only(top=6, left=6), alignment=alignment.center)]), Container(content=Text("  " + msg.strip() , weight=FontWeight.BOLD, color=colors.ON_SECONDARY_CONTAINER, size=18), alignment=alignment.bottom_left, padding=padding.only(top=6)) ]))
+        #page.banner.content.controls.append(Stack([Container(content=Text(msg.strip() + "  ", weight=FontWeight.BOLD, color=colors.ON_SECONDARY_CONTAINER, size=18), alignment=alignment.bottom_left, padding=padding.only(top=6)), Container(content=ProgressRing(), alignment=alignment.center if (page.window_width or page.width) > 768 else alignment.center_right)]))
+        #page.banner.content.controls.append(Stack([Container(content=Text(msg.strip() + "  ", weight=FontWeight.BOLD, color=colors.ON_SECONDARY_CONTAINER, size=18), alignment=alignment.bottom_left, padding=padding.only(top=6)), Container(content=ProgressRing(), alignment=alignment.center)]))
+        #page.banner.content.controls.append(Row([Text(msg.strip() + "  ", weight=FontWeight.BOLD, color=colors.GREEN_600), ProgressRing()]))
+      else:
+        page.banner.content.controls.append(Text(msg.strip(), weight=FontWeight.BOLD, color=colors.GREEN_600))
+      page.update()
+
+    page.console_msg = console_msg
+    if status['changed_installers']:
+      save_settings_file(page, change_icon=False)
+      status['changed_installers'] = False
+    # Temporary until I get Xformers to work
+    #prefs['memory_optimization'] = 'Attention Slicing' if prefs['enable_attention_slicing'] else 'None'
+    if prefs['install_diffusers'] and not bool(prefs['HuggingFace_api_key']):
+      alert_msg(e.page, "You must provide your HuggingFace API Key to use Diffusers.")
+      return
+    if prefs['install_Stability_api'] and not bool(prefs['Stability_api_key']):
+      alert_msg(e.page, "You must have your DreamStudio.ai Stability-API Key to use Stability.  Note that it will use your tokens.")
+      return
+    if prefs['install_OpenAI'] and not bool(prefs['OpenAI_api_key']):
+      alert_msg(e.page, "You must have your OpenAI API Key to use GPT-3 Text AI.")
+      return
+    if prefs['install_TextSynth'] and not bool(prefs['TextSynth_api_key']):
+      alert_msg(e.page, "You must have your TextSynth API Key to use GPT-J Text AI.")
+      return
+    if prefs['install_AIHorde_api'] and not bool(prefs['AIHorde_api_key']):
+      alert_msg(e.page, "You must have your AIHorde.net API Key to use Stable Horde.  Note that it will use your Kudos.")
+      return
+    page.banner.content = Column([], scroll=ScrollMode.AUTO, auto_scroll=True, tight=True, spacing=0, alignment=MainAxisAlignment.END)
+    page.banner.open = True
+    page.update()
+    if prefs['install_diffusers']:
+      console_msg("Installing Hugging Face Diffusers Pipeline...")
+      get_diffusers(page)
+      status['installed_diffusers'] = True
+    if prefs['install_text2img'] and prefs['install_diffusers']:
+      console_msg("Downloading Stable Diffusion Text2Image, Image2Image & Inpaint Pipeline...")
+      #with io.StringIO() as buf, redirect_stdout(buf):
+      #print('redirected')
+      get_text2image(page)
+      #output = buf.getvalue()
+      #page.banner.content.controls.append(Text(output.strip()))
+      status['installed_txt2img'] = True
+      page.img_block.height = None
+      page.img_block.update()
+      page.update()
+    if prefs['install_img2img'] and prefs['install_diffusers']:
+      console_msg("Downloading Stable Diffusion Inpaint Model & Image2Image Pipeline...")
+      get_image2image(page)
+      status['installed_img2img'] = True
+      page.img_block.height = None
+      page.img_block.update()
+      page.use_inpaint_model.visible = True
+      page.use_inpaint_model.update()
+      if not status['installed_txt2img']:
+        prefs['use_inpaint_model'] = True
+    '''if prefs['install_megapipe'] and prefs['install_diffusers']:
         console_msg("Downloading Stable Diffusion Unified Mega Pipeline...")
         get_text2image(page)
         status['installed_megapipe'] = True
         page.img_block.height = None
         page.img_block.update()'''
-      if prefs['install_alt_diffusion'] and prefs['install_diffusers']:
-        console_msg("Installing AltDiffusion text2image & image2image Pipeline...")
-        get_alt_diffusion(page)
-        status['installed_alt_diffusion'] = True
-        page.use_alt_diffusion.visible = True
-        page.use_alt_diffusion.update()
-      if prefs['install_interpolation'] and prefs['install_diffusers']:
-        console_msg("Downloading Stable Diffusion Walk Interpolation Pipeline...")
-        get_interpolation(page)
-        status['installed_interpolation'] = True
-        page.interpolation_block.visible = True
-        page.interpolation_block.update()
-      if prefs['install_CLIP_guided'] and prefs['install_diffusers']:
-        console_msg("Downloading Stable Diffusion CLIP-Guided Pipeline...")
-        get_clip(page)
-        status['installed_clip'] = True
-        page.use_clip_guided_model.visible = True
-        page.use_clip_guided_model.update()
-        page.clip_block.height = None if prefs['use_clip_guided_model'] else 0
-        page.clip_block.update()
-        if prefs['use_clip_guided_model']:
-          page.img_block.height = 0
-          page.img_block.update()
-      if prefs['install_conceptualizer'] and prefs['install_diffusers']:
-        console_msg("Installing SD Concepts Library Textual Inversion Pipeline...")
-        get_conceptualizer(page)
-        page.use_conceptualizer_model.visible = True
-        page.use_conceptualizer_model.update()
-        if prefs['use_conceptualizer']:
-          page.img_block.height = 0
-          page.img_block.update()
-        status['installed_conceptualizer'] = True
-      if prefs['install_repaint'] and not status['installed_repaint'] and prefs['install_diffusers']:
-        console_msg("Installing Stable Diffusion RePaint Pipeline...")
-        get_repaint(page)
-        status['installed_repaint'] = True
-      if prefs['install_depth2img'] and prefs['install_diffusers']:
-        console_msg("Installing Stable Diffusion 2 Depth2Image Pipeline...")
-        get_depth2img(page)
-        status['installed_depth2img'] = True
-        if not status['installed_txt2img']:
-          page.img_block.height = None
-          page.img_block.update()
-        page.use_depth2img.visible = True
-        page.use_depth2img.update()
-      if prefs['install_SAG'] and prefs['install_diffusers']:
-        console_msg("Installing Stable Diffusion Self-Attention Guidance text2image Pipeline...")
-        get_SAG(page)
-        status['installed_SAG'] = True
-        page.use_SAG.visible = True
-        page.use_SAG.update()
-      if prefs['install_attend_and_excite'] and prefs['install_diffusers']:
-        console_msg("Installing Stable Diffusion Attend and Excite text2image Pipeline...")
-        get_attend_and_excite(page)
-        status['installed_attend_and_excite'] = True
-        page.use_attend_and_excite.visible = True
-        page.use_attend_and_excite.update()
-      if prefs['install_imagic'] and prefs['install_diffusers']:
-        console_msg("Installing Stable Diffusion iMagic image2image Pipeline...")
-        get_imagic(page)
-        status['installed_imagic'] = True
-        if not status['installed_txt2img']:
-          page.img_block.height = None
-          page.img_block.update()
-        page.use_imagic.visible = True
-        page.use_imagic.update()
-      if prefs['install_composable'] and prefs['install_diffusers']:
-        console_msg("Installing Stable Diffusion Composable text2image Pipeline...")
-        get_composable(page)
-        status['installed_composable'] = True
-        page.use_composable.visible = True
-        page.use_composable.update()
-      if prefs['install_versatile'] and prefs['install_diffusers']:
-        console_msg("Installing Stable Diffusion Versatile text2image, Variation & Inpaint Pipeline...")
-        get_versatile(page)
-        status['installed_versatile'] = True
-        if not status['installed_txt2img']:
-          page.img_block.height = None
-          page.img_block.update()
-        page.use_versatile.visible = True
-        page.use_versatile.update()
-      if prefs['install_safe'] and prefs['install_diffusers']:
-        console_msg("Installing Stable Diffusion Safe text2image Pipeline...")
-        get_safe(page)
-        status['installed_safe'] = True
-        page.use_safe.visible = True
-        page.use_safe.update()
-      if prefs['install_panorama'] and prefs['install_diffusers']:
-        console_msg("Installing MultiDiffusion Panorama text2image Pipeline...")
-        get_panorama(page)
-        status['installed_panorama'] = True
-        page.use_panorama.visible = True
-        page.use_panorama.update()
-      if prefs['install_upscale'] and prefs['install_diffusers']:
-        console_msg("Installing Stable Diffusion 4X Upscale Pipeline...")
-        get_upscale(page)
-        status['installed_upscale'] = True
-        page.use_upscale.visible = True
-        page.use_upscale.update()
-      if prefs['install_dreamfusion'] and not status['installed_dreamfusion'] and prefs['install_diffusers']:
-        console_msg("Installing Stable Diffusion DreamFusion 3D Pipeline...")
-        get_dreamfusion(page) # No longer installing from here
-        status['installed_dreamfusion'] = True
-      if prefs['install_Stability_api']:
-        console_msg("Installing Stability-API DreamStudio.ai Pipeline...")
-        get_stability(page)
-        status['installed_stability'] = True
-      if prefs['install_AIHorde_api']:
-        console_msg("Installing Stable Horde AIHorde.net Pipeline...")
-        get_AIHorde(page)
-      if prefs['install_ESRGAN'] and not status['installed_ESRGAN']:
-        if not os.path.isdir(os.path.join(dist_dir, 'Real-ESRGAN')):
-          get_ESRGAN(page)
-          console_msg("Installing Real-ESRGAN Upscaler...")
-        status['installed_ESRGAN'] = True
-      if prefs['install_ESRGAN']:
-        page.ESRGAN_block.height = None
-        page.ESRGAN_block_material.height = None
-        page.ESRGAN_block_dalle.height = None
-        page.ESRGAN_block_kandinsky.height = None
-        page.ESRGAN_block_kandinsky_fuse.height = None
-        page.ESRGAN_block_unCLIP.height = None
-        page.ESRGAN_block_unCLIP_image_variation.height = None
-        page.ESRGAN_block_unCLIP_interpolation.height = None
-        page.ESRGAN_block_unCLIP_image_interpolation.height = None
-        page.ESRGAN_block_semantic.height = None
-        page.ESRGAN_block_EDICT.height = None
-        page.ESRGAN_block_DiffEdit.height = None
-        page.ESRGAN_block_magic_mix.height = None
-        page.ESRGAN_block_paint_by_example.height = None
-        page.ESRGAN_block_instruct_pix2pix.height = None
-        page.ESRGAN_block_controlnet.height = None
-        page.ESRGAN_block_styler.height = None
-        page.ESRGAN_block_deep_daze.height = None
-        page.ESRGAN_block_DiT.height = None
-        page.ESRGAN_block_text_to_video.height = None
-        page.ESRGAN_block_text_to_video_zero.height = None
-        page.ESRGAN_block.update()
-        page.ESRGAN_block_material.update()
-        page.ESRGAN_block_dalle.update()
-        page.ESRGAN_block_kandinsky.update()
-        page.ESRGAN_block_kandinsky_fuse.update()
-        page.ESRGAN_block_unCLIP.update()
-        page.ESRGAN_block_unCLIP_image_variation.update()
-        page.ESRGAN_block_unCLIP_interpolation.update()
-        page.ESRGAN_block_unCLIP_image_interpolation.update()
-        page.ESRGAN_block_semantic.update()
-        page.ESRGAN_block_EDICT.update()
-        page.ESRGAN_block_DiffEdit.update()
-        page.ESRGAN_block_magic_mix.update()
-        page.ESRGAN_block_paint_by_example.update()
-        page.ESRGAN_block_instruct_pix2pix.update()
-        page.ESRGAN_block_controlnet.update()
-        page.ESRGAN_block_styler.update()
-        page.ESRGAN_block_deep_daze.update()
-        page.ESRGAN_block_DiT.update()
-        page.ESRGAN_block_text_to_video.update()
-        page.ESRGAN_block_text_to_video_zero.update()
-      if prefs['install_OpenAI'] and not status['installed_OpenAI']:
-        try:
-          import openai
-        except ImportError as e:
-          console_msg("Installing OpenAI GPT-3 Libraries...")
-          run_process("pip install openai -qq", page=page)
-          pass
-        status['installed_OpenAI'] = True
-      if prefs['install_TextSynth'] and not status['installed_TextSynth']:
-        try:
-          from textsynthpy import TextSynth, Complete
-        except ImportError as e:
-          console_msg("Installing TextSynth GPT-J Libraries...")
-          run_process("pip install textsynthpy -qq", page=page)
-          pass
-        status['installed_TextSynth'] = True
-      #print('Done Installing...')
-      if prefs['enable_sounds']: page.snd_done.play()
-      console_clear()
-      page.banner.open = False
-      page.banner.update()
+    if prefs['install_alt_diffusion'] and prefs['install_diffusers']:
+      console_msg("Installing AltDiffusion text2image & image2image Pipeline...")
+      get_alt_diffusion(page)
+      status['installed_alt_diffusion'] = True
+      page.use_alt_diffusion.visible = True
+      page.use_alt_diffusion.update()
+    if prefs['install_interpolation'] and prefs['install_diffusers']:
+      console_msg("Downloading Stable Diffusion Walk Interpolation Pipeline...")
+      get_interpolation(page)
+      status['installed_interpolation'] = True
+      page.interpolation_block.visible = True
+      page.interpolation_block.update()
+    if prefs['install_CLIP_guided'] and prefs['install_diffusers']:
+      console_msg("Downloading Stable Diffusion CLIP-Guided Pipeline...")
+      get_clip(page)
+      status['installed_clip'] = True
+      page.use_clip_guided_model.visible = True
+      page.use_clip_guided_model.update()
+      page.clip_block.height = None if prefs['use_clip_guided_model'] else 0
+      page.clip_block.update()
+      if prefs['use_clip_guided_model']:
+        page.img_block.height = 0
+        page.img_block.update()
+    if prefs['install_conceptualizer'] and prefs['install_diffusers']:
+      console_msg("Installing SD Concepts Library Textual Inversion Pipeline...")
+      get_conceptualizer(page)
+      page.use_conceptualizer_model.visible = True
+      page.use_conceptualizer_model.update()
+      if prefs['use_conceptualizer']:
+        page.img_block.height = 0
+        page.img_block.update()
+      status['installed_conceptualizer'] = True
+    if prefs['install_repaint'] and not status['installed_repaint'] and prefs['install_diffusers']:
+      console_msg("Installing Stable Diffusion RePaint Pipeline...")
+      get_repaint(page)
+      status['installed_repaint'] = True
+    if prefs['install_depth2img'] and prefs['install_diffusers']:
+      console_msg("Installing Stable Diffusion 2 Depth2Image Pipeline...")
+      get_depth2img(page)
+      status['installed_depth2img'] = True
+      if not status['installed_txt2img']:
+        page.img_block.height = None
+        page.img_block.update()
+      page.use_depth2img.visible = True
+      page.use_depth2img.update()
+    if prefs['install_SAG'] and prefs['install_diffusers']:
+      console_msg("Installing Stable Diffusion Self-Attention Guidance text2image Pipeline...")
+      get_SAG(page)
+      status['installed_SAG'] = True
+      page.use_SAG.visible = True
+      page.use_SAG.update()
+    if prefs['install_attend_and_excite'] and prefs['install_diffusers']:
+      console_msg("Installing Stable Diffusion Attend and Excite text2image Pipeline...")
+      get_attend_and_excite(page)
+      status['installed_attend_and_excite'] = True
+      page.use_attend_and_excite.visible = True
+      page.use_attend_and_excite.update()
+    if prefs['install_imagic'] and prefs['install_diffusers']:
+      console_msg("Installing Stable Diffusion iMagic image2image Pipeline...")
+      get_imagic(page)
+      status['installed_imagic'] = True
+      if not status['installed_txt2img']:
+        page.img_block.height = None
+        page.img_block.update()
+      page.use_imagic.visible = True
+      page.use_imagic.update()
+    if prefs['install_composable'] and prefs['install_diffusers']:
+      console_msg("Installing Stable Diffusion Composable text2image Pipeline...")
+      get_composable(page)
+      status['installed_composable'] = True
+      page.use_composable.visible = True
+      page.use_composable.update()
+    if prefs['install_versatile'] and prefs['install_diffusers']:
+      console_msg("Installing Stable Diffusion Versatile text2image, Variation & Inpaint Pipeline...")
+      get_versatile(page)
+      status['installed_versatile'] = True
+      if not status['installed_txt2img']:
+        page.img_block.height = None
+        page.img_block.update()
+      page.use_versatile.visible = True
+      page.use_versatile.update()
+    if prefs['install_safe'] and prefs['install_diffusers']:
+      console_msg("Installing Stable Diffusion Safe text2image Pipeline...")
+      get_safe(page)
+      status['installed_safe'] = True
+      page.use_safe.visible = True
+      page.use_safe.update()
+    if prefs['install_panorama'] and prefs['install_diffusers']:
+      console_msg("Installing MultiDiffusion Panorama text2image Pipeline...")
+      get_panorama(page)
+      status['installed_panorama'] = True
+      page.use_panorama.visible = True
+      page.use_panorama.update()
+    if prefs['install_upscale'] and prefs['install_diffusers']:
+      console_msg("Installing Stable Diffusion 4X Upscale Pipeline...")
+      get_upscale(page)
+      status['installed_upscale'] = True
+      page.use_upscale.visible = True
+      page.use_upscale.update()
+    if prefs['install_dreamfusion'] and not status['installed_dreamfusion'] and prefs['install_diffusers']:
+      console_msg("Installing Stable Diffusion DreamFusion 3D Pipeline...")
+      get_dreamfusion(page) # No longer installing from here
+      status['installed_dreamfusion'] = True
+    if prefs['install_Stability_api']:
+      console_msg("Installing Stability-API DreamStudio.ai Pipeline...")
+      get_stability(page)
+      status['installed_stability'] = True
+    if prefs['install_AIHorde_api']:
+      console_msg("Installing Stable Horde AIHorde.net Pipeline...")
+      get_AIHorde(page)
+    if prefs['install_ESRGAN'] and not status['installed_ESRGAN']:
+      if not os.path.isdir(os.path.join(dist_dir, 'Real-ESRGAN')):
+        get_ESRGAN(page)
+        console_msg("Installing Real-ESRGAN Upscaler...")
+      status['installed_ESRGAN'] = True
+    if prefs['install_ESRGAN']:
+      page.ESRGAN_block.height = None
+      page.ESRGAN_block_material.height = None
+      page.ESRGAN_block_dalle.height = None
+      page.ESRGAN_block_kandinsky.height = None
+      page.ESRGAN_block_kandinsky_fuse.height = None
+      page.ESRGAN_block_unCLIP.height = None
+      page.ESRGAN_block_unCLIP_image_variation.height = None
+      page.ESRGAN_block_unCLIP_interpolation.height = None
+      page.ESRGAN_block_unCLIP_image_interpolation.height = None
+      page.ESRGAN_block_semantic.height = None
+      page.ESRGAN_block_EDICT.height = None
+      page.ESRGAN_block_DiffEdit.height = None
+      page.ESRGAN_block_magic_mix.height = None
+      page.ESRGAN_block_paint_by_example.height = None
+      page.ESRGAN_block_instruct_pix2pix.height = None
+      page.ESRGAN_block_controlnet.height = None
+      page.ESRGAN_block_styler.height = None
+      page.ESRGAN_block_deep_daze.height = None
+      page.ESRGAN_block_DiT.height = None
+      page.ESRGAN_block_text_to_video.height = None
+      page.ESRGAN_block_text_to_video_zero.height = None
+      page.ESRGAN_block.update()
+      page.ESRGAN_block_material.update()
+      page.ESRGAN_block_dalle.update()
+      page.ESRGAN_block_kandinsky.update()
+      page.ESRGAN_block_kandinsky_fuse.update()
+      page.ESRGAN_block_unCLIP.update()
+      page.ESRGAN_block_unCLIP_image_variation.update()
+      page.ESRGAN_block_unCLIP_interpolation.update()
+      page.ESRGAN_block_unCLIP_image_interpolation.update()
+      page.ESRGAN_block_semantic.update()
+      page.ESRGAN_block_EDICT.update()
+      page.ESRGAN_block_DiffEdit.update()
+      page.ESRGAN_block_magic_mix.update()
+      page.ESRGAN_block_paint_by_example.update()
+      page.ESRGAN_block_instruct_pix2pix.update()
+      page.ESRGAN_block_controlnet.update()
+      page.ESRGAN_block_styler.update()
+      page.ESRGAN_block_deep_daze.update()
+      page.ESRGAN_block_DiT.update()
+      page.ESRGAN_block_text_to_video.update()
+      page.ESRGAN_block_text_to_video_zero.update()
+    if prefs['install_OpenAI'] and not status['installed_OpenAI']:
+      try:
+        import openai
+      except ImportError as e:
+        console_msg("Installing OpenAI GPT-3 Libraries...")
+        run_process("pip install openai -qq", page=page)
+      status['installed_OpenAI'] = True
+    if prefs['install_TextSynth'] and not status['installed_TextSynth']:
+      try:
+        from textsynthpy import TextSynth, Complete
+      except ImportError as e:
+        console_msg("Installing TextSynth GPT-J Libraries...")
+        run_process("pip install textsynthpy -qq", page=page)
+      status['installed_TextSynth'] = True
+    #print('Done Installing...')
+    if prefs['enable_sounds']: page.snd_done.play()
+    console_clear()
+    page.banner.open = False
+    page.banner.update()
+    page.update()
+    install_diffusers.update()
+    #install_text2img.update()
+    #install_img2img.update()
+    install_Stability_api.update()
+    install_CLIP_guided.update()
+    install_ESRGAN.update()
+    install_OpenAI.update()
+    install_TextSynth.update()
+    update_parameters(page)
+    page.Parameters.controls[0].content.update()
+    #page.Parameters.updater()
+    force_updates = False
+    if current_tab==1:
+      page.Installers.controls[0].content.update()
+      page.Installers.update()
+      page.show_install_fab(False)
+      page.tabs.selected_index = 2
+      page.tabs.update()
       page.update()
-      install_diffusers.update()
-      #install_text2img.update()
-      #install_img2img.update()
-      install_Stability_api.update()
-      install_CLIP_guided.update()
-      install_ESRGAN.update()
-      install_OpenAI.update()
-      install_TextSynth.update()
-      update_parameters(page)
-      page.Parameters.controls[0].content.update()
-      #page.Parameters.updater()
-      force_updates = False
-      if current_tab==1:
-        page.Installers.controls[0].content.update()
-        page.Installers.update()
-        page.show_install_fab(False)
-        page.tabs.selected_index = 2
-        page.tabs.update()
-        page.update()
+
   def show_install_fab(show = True):
     if show:
       page.floating_action_button = FloatingActionButton(content=Row([Icon(icons.FILE_DOWNLOAD), Text("Run Installations", size=18)], alignment="center", spacing=5), width=205, shape=ft.RoundedRectangleBorder(radius=22), on_click=run_installers)
@@ -1564,9 +1687,10 @@ def buildInstallers(page):
       if page.floating_action_button is not None:
         page.floating_action_button = None
         page.update()
+
   page.show_install_fab = show_install_fab
   install_button = ElevatedButton(content=Text(value="⏬   Run Installations ", size=20), on_click=run_installers)
-  
+
   #image_output = TextField(label="Image Output Path", value=prefs['image_output'], on_change=changed)
   c = Column([Container(
       padding=padding.only(18, 14, 20, 10),
@@ -1597,6 +1721,7 @@ def buildInstallers(page):
     stability_settings.update()
     clip_settings.update()
     page.update()
+
   #init_boxes()
   return c
 
